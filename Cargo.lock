@@ -1430,6 +1430,7 @@ dependencies = [
  "thiserror",
  "tokio-stream",
  "url",
+ "uuid",
  "webpki-roots",
  "whoami",
 ]
@@ -1711,6 +1712,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d023da39d1fde5a8a3fe1f3e01ca9632ada0a63e9797de55a879d6e2236277be"
 dependencies = [
  "getrandom",
+ "serde",
 ]
 
 [[package]]

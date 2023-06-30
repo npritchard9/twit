@@ -1,5 +1,5 @@
 pub mod message;
-pub mod user;
+pub mod person;
 
 pub use message::*;
-pub use user::*;
+pub use person::*;

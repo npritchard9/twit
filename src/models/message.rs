@@ -1,20 +1,19 @@
-use super::user::User;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Message {
-    pub user: User,
+    pub userid: Uuid,
     pub content: String,
-    pub id: String, // Uuid
+    pub id: Uuid, // Uuid
 }
 
 impl Message {
-    pub fn new(user: User, content: String) -> Self {
+    pub fn new(userid: Uuid, content: String) -> Self {
         Message {
-            user,
+            userid,
             content,
-            id: Uuid::new_v4().to_string(),
+            id: Uuid::new_v4(),
         }
     }
 }
