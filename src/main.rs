@@ -1,40 +1,42 @@
 use actix_web::{
     get,
     middleware::Logger,
-    web::{post, resource, Json, Path},
+    web::{self, post, resource, Json, Path},
     App, HttpResponse, HttpServer, Responder,
 };
+use dockerprac::{
+    db::get_db,
+    models::{Message, User},
+};
 use env_logger::Env;
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
-struct Person {
-    name: String,
-    age: u8,
-}
-
-async fn submit(data: Json<Person>) -> impl Responder {
-    log::info!("Received {:?}", data);
+async fn create_user(user: Json<User>) -> impl Responder {
+    log::info!("Received {:?}", user);
     HttpResponse::Ok()
 }
 
-#[get("/{name}")]
-async fn get_account(name: Path<String>) -> impl Responder {
-    log::info!("Request to /{}", name);
-    HttpResponse::Ok().json(Person {
-        name: name.to_string(),
-        age: 22,
-    })
+async fn create_msg(msg: Json<Message>) -> impl Responder {
+    log::info!("Received {:?}", msg);
+    HttpResponse::Ok()
+}
+
+#[get("/")]
+async fn get_msgs() -> impl Responder {
+    log::info!("Request to /");
+    HttpResponse::Ok()
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
-    HttpServer::new(|| {
+    let pool = get_db().await.expect("The db to exist");
+    HttpServer::new(move || {
         App::new()
+            .app_data(web::Data::new(pool.clone()))
             .wrap(Logger::default())
-            .service(get_account)
-            .service(resource("/create_account").route(post().to(submit)))
+            .service(get_msgs)
+            .service(resource("/create_user").route(post().to(create_user)))
+            .service(resource("/create_msg").route(post().to(create_msg)))
     })
     .bind(("0.0.0.0", 8080))?
     .run()
