@@ -7,29 +7,26 @@ use actix_web::{
 };
 use dockerprac::{
     db::get_db,
-    models::{FMessage, FUser, Message, Person},
+    models::{CheckUser, IncomingUser, Message, Person, UserMessage},
 };
 use env_logger::Env;
 use sqlx::PgPool;
 
-async fn create_user(user: Json<FUser>, pool: Data<PgPool>) -> impl Responder {
+async fn user_exists(user: Json<CheckUser>, pool: Data<PgPool>) -> impl Responder {
     log::info!("Received {:?}", user);
 
-    let person = Person::new(user.name.clone(), user.bio.clone());
-
-    match sqlx::query!(
+    match sqlx::query_as!(
+        Person,
         r#"
-        INSERT INTO person (name, bio, id)
-        VALUES ($1, $2, $3)
+        SELECT * FROM person WHERE name = $1 and password = $2
         "#,
-        person.name,
-        person.bio,
-        person.id
+        user.name,
+        user.password,
     )
-    .execute(pool.get_ref())
+    .fetch_one(pool.get_ref())
     .await
     {
-        Ok(_) => HttpResponse::Ok().finish(),
+        Ok(p) => HttpResponse::Ok().json(p),
         Err(e) => {
             println!("Failed to execute query: {}", e);
             HttpResponse::InternalServerError().finish()
@@ -37,7 +34,33 @@ async fn create_user(user: Json<FUser>, pool: Data<PgPool>) -> impl Responder {
     }
 }
 
-async fn create_msg(msg: Json<FMessage>, pool: Data<PgPool>) -> impl Responder {
+async fn create_user(user: Json<IncomingUser>, pool: Data<PgPool>) -> impl Responder {
+    log::info!("Received {:?}", user);
+
+    let person = Person::new(user.name.clone(), user.password.clone(), user.bio.clone());
+
+    match sqlx::query!(
+        r#"
+        INSERT INTO person (name, password, bio, id)
+        VALUES ($1, $2, $3, $4)
+        "#,
+        person.name,
+        person.password,
+        person.bio,
+        person.id
+    )
+    .execute(pool.get_ref())
+    .await
+    {
+        Ok(_) => HttpResponse::Ok().json(person),
+        Err(e) => {
+            println!("Failed to execute query: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+async fn create_msg(msg: Json<UserMessage>, pool: Data<PgPool>) -> impl Responder {
     log::info!("Received {:?}", msg);
 
     let msg = Message::new(msg.userid, msg.content.clone());
@@ -56,8 +79,7 @@ async fn create_msg(msg: Json<FMessage>, pool: Data<PgPool>) -> impl Responder {
     {
         Ok(_) => {
             log::info!("Successfully created a new msg");
-            HttpResponse::Ok()
-                .finish()
+            HttpResponse::Ok().finish()
         }
         Err(e) => {
             println!("Failed to execute query: {}", e);
@@ -77,8 +99,7 @@ async fn get_msgs(pool: Data<PgPool>) -> impl Responder {
         .fetch_all(&mut conn)
         .await
     {
-        Ok(msgs) => HttpResponse::Ok()
-            .json(msgs),
+        Ok(msgs) => HttpResponse::Ok().json(msgs),
         Err(e) => {
             println!("Failed to execute query: {}", e);
             HttpResponse::InternalServerError().finish()
@@ -97,8 +118,7 @@ async fn get_users(pool: Data<PgPool>) -> impl Responder {
         .fetch_all(&mut conn)
         .await
     {
-        Ok(msgs) => HttpResponse::Ok()
-            .json(msgs),
+        Ok(msgs) => HttpResponse::Ok().json(msgs),
         Err(e) => {
             println!("Failed to execute query: {}", e);
             HttpResponse::InternalServerError().finish()
@@ -118,6 +138,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .service(get_msgs)
             .service(get_users)
+            .service(resource("/user_exists").route(post().to(user_exists)))
             .service(resource("/create_user").route(post().to(create_user)))
             .service(resource("/create_msg").route(post().to(create_msg)))
     })

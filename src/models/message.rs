@@ -5,7 +5,7 @@ use uuid::Uuid;
 pub struct Message {
     pub userid: Uuid,
     pub content: String,
-    pub id: Uuid, // Uuid
+    pub id: Uuid,
 }
 
 impl Message {

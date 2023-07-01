@@ -8,13 +8,12 @@ type UserMessage = {
 };
 
 const [msg, setMsg] = createSignal("");
-const [userid, setUserId] = createSignal("d28297bb-a49d-476b-b74f-de8af43661f5");
 
-export default function CreateMsg() {
+export default function CreateMsg(props: { userid: string }) {
 	const qc = useQueryClient();
 	const msg_mutation = createMutation(
 		async () => {
-			let json: UserMessage = { userid: userid(), content: msg() };
+			let json: UserMessage = { userid: props.userid, content: msg() };
 			await fetch("http://127.0.0.1:8080/create_msg", {
 				method: "POST",
 				headers: {
