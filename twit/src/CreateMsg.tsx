@@ -1,8 +1,8 @@
 import { Match, Switch, createSignal } from "solid-js";
 import { SendButton } from "./assets/svgs";
-import { createMutation } from "@tanstack/solid-query";
+import { createMutation, useQueryClient } from "@tanstack/solid-query";
 
-type Message = {
+type UserMessage = {
 	userid: string;
 	content: string;
 };
@@ -11,16 +11,25 @@ const [msg, setMsg] = createSignal("");
 const [userid, setUserId] = createSignal("d28297bb-a49d-476b-b74f-de8af43661f5");
 
 export default function CreateMsg() {
-	const msg_mutation = createMutation(async () => {
-		let json: Message = { userid: userid(), content: msg() };
-		await fetch("http://127.0.0.1:8080/create_msg", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
+	const qc = useQueryClient();
+	const msg_mutation = createMutation(
+		async () => {
+			let json: UserMessage = { userid: userid(), content: msg() };
+			await fetch("http://127.0.0.1:8080/create_msg", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(json),
+			});
+		},
+		{
+			onSuccess: () => {
+				setMsg("");
+				qc.invalidateQueries({ queryKey: ["msgs"] });
 			},
-			body: JSON.stringify(json),
-		});
-	});
+		}
+	);
 
 	const post_msg = () => {
 		msg_mutation.mutate();

@@ -1,7 +1,7 @@
 import { createQuery } from "@tanstack/solid-query";
 import { Switch, Match, For } from "solid-js";
 
-type Message = {
+export type Message = {
 	userid: string;
 	content: string;
 	id: string;
