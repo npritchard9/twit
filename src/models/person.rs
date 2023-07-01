@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+use ts_rs::TS;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, TS)]
+#[ts(export)]
 pub struct Person {
     pub name: String,
     pub password: String,
     pub bio: String,
-    pub id: Uuid,
 }
 
 impl Person {
@@ -15,7 +15,6 @@ impl Person {
             name,
             password,
             bio,
-            id: Uuid::new_v4(),
         }
     }
 }

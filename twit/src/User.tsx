@@ -1,12 +1,6 @@
 import { Match, Switch, createSignal } from "solid-js";
 import { createMutation, useQueryClient } from "@tanstack/solid-query";
-
-export type Person = {
-	name: string;
-	password: string;
-	bio: string;
-	id: string;
-};
+import { Person } from "../../bindings/Person";
 
 const [username, setUsername] = createSignal("");
 const [password, setPassword] = createSignal("");
@@ -14,7 +8,7 @@ const [bio, setBio] = createSignal("");
 
 export function User(props: Person) {
 	return (
-		<div class="flex flex-col">
+		<div class="flex flex-col mb-4">
 			<div class="text-2xl font-bold">{props.name}</div>
 			<div>{props.bio}</div>
 		</div>
@@ -29,7 +23,6 @@ export function EditUser(props: Person) {
 				name: username(),
 				password: password(),
 				bio: bio(),
-				id: props.id,
 			};
 			await fetch("http://127.0.0.1:8080/edit_user", {
 				method: "POST",

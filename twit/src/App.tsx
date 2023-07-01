@@ -2,10 +2,11 @@ import { Show, type Component, createSignal } from "solid-js";
 import Messages from "./Messages";
 import Users from "./Users";
 import CreateMsg from "./CreateMsg";
-import { Person, User } from "./User";
+import { User } from "./User";
 import Login from "./Login";
+import { Person } from "../../bindings/Person";
 
-const [user, setUser] = createSignal<Person>(null);
+const [user, setUser] = createSignal<Person>(JSON.parse(sessionStorage.getItem("user")) ?? null);
 
 const App: Component = () => {
 	return (
@@ -28,7 +29,7 @@ const App: Component = () => {
 				</div>
 				<div class="flex flex-col items-center justify-start col-span-2 h-full w-full">
 					<div class="border-b border-b-gray-600 w-full">
-						<CreateMsg userid={user().id} />
+						<CreateMsg userid={user().name} />
 					</div>
 					<Messages />
 				</div>

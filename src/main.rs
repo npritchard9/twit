@@ -41,13 +41,12 @@ async fn create_user(user: Json<IncomingUser>, pool: Data<PgPool>) -> impl Respo
 
     match sqlx::query!(
         r#"
-        INSERT INTO person (name, password, bio, id)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO person (name, password, bio)
+        VALUES ($1, $2, $3)
         "#,
         person.name,
         person.password,
         person.bio,
-        person.id
     )
     .execute(pool.get_ref())
     .await
@@ -63,16 +62,16 @@ async fn create_user(user: Json<IncomingUser>, pool: Data<PgPool>) -> impl Respo
 async fn create_msg(msg: Json<UserMessage>, pool: Data<PgPool>) -> impl Responder {
     log::info!("Received {:?}", msg);
 
-    let msg = Message::new(msg.userid, msg.content.clone());
+    let msg = Message::new(msg.userid.clone(), msg.content.clone());
 
     match sqlx::query!(
         r#"
-        INSERT INTO message (userid, content, id)
+        INSERT INTO message (content, userid, ts)
         VALUES ($1, $2, $3)
         "#,
-        msg.userid,
         msg.content,
-        msg.id
+        msg.userid,
+        msg.ts
     )
     .execute(pool.get_ref())
     .await

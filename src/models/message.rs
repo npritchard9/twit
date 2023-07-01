@@ -1,19 +1,21 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+use ts_rs::TS;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, TS)]
+#[ts(export)]
 pub struct Message {
-    pub userid: Uuid,
+    pub userid: String,
     pub content: String,
-    pub id: Uuid,
+    pub ts: DateTime<Utc>,
 }
 
 impl Message {
-    pub fn new(userid: Uuid, content: String) -> Self {
+    pub fn new(userid: String, content: String) -> Self {
         Message {
             userid,
             content,
-            id: Uuid::new_v4(),
+            ts: Utc::now(),
         }
     }
 }

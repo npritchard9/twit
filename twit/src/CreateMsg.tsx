@@ -1,11 +1,7 @@
 import { Match, Switch, createSignal } from "solid-js";
 import { SendButton } from "./assets/svgs";
 import { createMutation, useQueryClient } from "@tanstack/solid-query";
-
-type UserMessage = {
-	userid: string;
-	content: string;
-};
+import { UserMessage } from "../../bindings/UserMessage";
 
 const [msg, setMsg] = createSignal("");
 
@@ -48,9 +44,13 @@ export default function CreateMsg(props: { userid: string }) {
 				placeholder="Send a message..."
 				oninput={e => setMsg(e.currentTarget.value)}
 				value={msg()}
-				class="bg-gray-600 px-2 py-4 rounded-xl w-3/4"
+				class="bg-black px-2 py-4 rounded-xl w-3/4 outline-none"
 			/>
-			<button class="bg-sky-400 rounded-full p-2" onclick={() => post_msg()}>
+			<button
+				class="bg-sky-400 rounded-full p-2 disabled:bg-black disabled:text-gray-600 duration-300 transition-colors"
+				disabled={msg().length === 0}
+				onclick={() => post_msg()}
+			>
 				<SendButton />
 			</button>
 		</div>

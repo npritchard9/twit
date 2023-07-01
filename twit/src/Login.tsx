@@ -1,17 +1,8 @@
 import { Match, Setter, Show, Switch, createSignal } from "solid-js";
 import { createMutation, useQueryClient } from "@tanstack/solid-query";
-import { Person } from "./User";
-
-type LoginUser = {
-	name: string;
-	password: string;
-};
-
-type CreateUser = {
-	name: string;
-	password: string;
-	bio: string;
-};
+import { Person } from "../../bindings/Person";
+import { CheckUser } from "../../bindings/CheckUser";
+import { IncomingUser } from "../../bindings/IncomingUser";
 
 type UserProps = {
 	setUser: Setter<Person>;
@@ -26,7 +17,7 @@ export default function Login(props: UserProps) {
 	const qc = useQueryClient();
 	const user_mutation = createMutation(
 		async () => {
-			let json: LoginUser = { name: name(), password: password() };
+			let json: CheckUser = { name: name(), password: password() };
 			let res = await fetch("http://127.0.0.1:8080/user_exists", {
 				method: "POST",
 				headers: {
@@ -35,7 +26,9 @@ export default function Login(props: UserProps) {
 				body: JSON.stringify(json),
 			});
 			if (res.status === 200) {
-				props.setUser(await res.json());
+				let user = await res.json();
+				sessionStorage.setItem("user", JSON.stringify(user));
+				props.setUser(user);
 			}
 		},
 		{
@@ -90,7 +83,7 @@ function CreateUser(props: UserProps) {
 	const qc = useQueryClient();
 	const user_mutation = createMutation(
 		async () => {
-			let json: CreateUser = { name: name(), password: password(), bio: bio() };
+			let json: IncomingUser = { name: name(), password: password(), bio: bio() };
 			let res = await fetch("http://127.0.0.1:8080/create_user", {
 				method: "POST",
 				headers: {
@@ -99,7 +92,9 @@ function CreateUser(props: UserProps) {
 				body: JSON.stringify(json),
 			});
 			if (res.status === 200) {
-				props.setUser(await res.json());
+				let user = await res.json();
+				sessionStorage.setItem("user", JSON.stringify(user));
+				props.setUser(user);
 			}
 		},
 		{

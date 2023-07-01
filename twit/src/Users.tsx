@@ -1,6 +1,7 @@
 import { createQuery } from "@tanstack/solid-query";
 import { Switch, Match, For } from "solid-js";
-import { User, type Person } from "./User";
+import { User } from "./User";
+import { Person } from "../../bindings/Person";
 
 async function fetchUsers() {
 	let users: Person[] = await (await fetch("http://127.0.0.1:8080/users")).json();
@@ -11,7 +12,7 @@ export default function Users() {
 	const user_query = createQuery(() => ["users"], fetchUsers);
 
 	return (
-		<div>
+		<div class="mt-2">
 			<Switch>
 				<Match when={user_query.isLoading}>
 					<div>Loading...</div>
