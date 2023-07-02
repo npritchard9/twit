@@ -44,7 +44,7 @@ export default function Login(props: UserProps) {
 		user_mutation.mutate();
 	};
 	return (
-		<div class="flex flex-col items-center justify-center gap-4 mb-4">
+		<div class="flex flex-col items-center justify-center gap-4 my-4">
 			<Show when={!showCreate()} fallback={<CreateUser setUser={props.setUser} />}>
 				<Switch>
 					<Match when={user_mutation.isLoading}>

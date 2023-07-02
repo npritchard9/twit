@@ -7,7 +7,7 @@ use actix_web::{
 };
 use dockerprac::{
     db::get_db,
-    models::{CheckUser, IncomingUser, Message, Person, UserMessage},
+    models::{CheckUser, DeleteMessage, IncomingUser, Message, Person, UserMessage},
 };
 use env_logger::Env;
 use sqlx::PgPool;
@@ -78,6 +78,30 @@ async fn create_msg(msg: Json<UserMessage>, pool: Data<PgPool>) -> impl Responde
     {
         Ok(_) => {
             log::info!("Successfully created a new msg");
+            HttpResponse::Ok().finish()
+        }
+        Err(e) => {
+            println!("Failed to execute query: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+async fn delete_msg(msg: Json<DeleteMessage>, pool: Data<PgPool>) -> impl Responder {
+    log::info!("Received {:?}", msg);
+
+    match sqlx::query!(
+        r#"
+        DELETE FROM message WHERE userid = $1 and ts = $2 
+        "#,
+        msg.userid,
+        msg.ts
+    )
+    .execute(pool.get_ref())
+    .await
+    {
+        Ok(_) => {
+            log::info!("Successfully deleted a msg");
             HttpResponse::Ok().finish()
         }
         Err(e) => {
@@ -167,6 +191,7 @@ async fn main() -> std::io::Result<()> {
             .service(resource("/user_exists").route(post().to(user_exists)))
             .service(resource("/create_user").route(post().to(create_user)))
             .service(resource("/create_msg").route(post().to(create_msg)))
+            .service(resource("/delete_msg").route(post().to(delete_msg)))
     })
     .bind(("127.0.0.1", 8080))?
     .run()

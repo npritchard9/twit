@@ -1,6 +1,8 @@
-import { createQuery } from "@tanstack/solid-query";
+import { createMutation, createQuery, useQueryClient } from "@tanstack/solid-query";
 import { Switch, Match, For, createSignal, Show } from "solid-js";
 import { Message } from "../../bindings/Message";
+import { DeleteMessage } from "../../bindings/DeleteMessage";
+import { DeleteButton, HeartButton } from "./assets/svgs";
 
 type View = "All" | "Me";
 
@@ -56,7 +58,9 @@ export default function Messages(props: { user: string }) {
 								<div>Error: {(me_query.error as Error).message}</div>
 							</Match>
 							<Match when={me_query.isSuccess}>
-								<For each={me_query.data}>{msg => <Msg {...msg} />}</For>
+								<For each={me_query.data}>
+									{msg => <Msg msg={msg} userid={props.user} />}
+								</For>
 							</Match>
 						</Switch>
 					}
@@ -69,7 +73,9 @@ export default function Messages(props: { user: string }) {
 							<div>Error: {(msg_query.error as Error).message}</div>
 						</Match>
 						<Match when={msg_query.isSuccess}>
-							<For each={msg_query.data}>{msg => <Msg {...msg} />}</For>
+							<For each={msg_query.data}>
+								{msg => <Msg msg={msg} userid={props.user} />}
+							</For>
 						</Match>
 					</Switch>
 				</Show>
@@ -78,16 +84,54 @@ export default function Messages(props: { user: string }) {
 	);
 }
 
-const Msg = (props: Message) => {
-	let utc = new Date(props.ts);
+type MsgProps = {
+	msg: Message;
+	userid: string;
+};
+
+const Msg = (props: MsgProps) => {
+	const qc = useQueryClient();
+	const delete_msg = createMutation(
+		async () => {
+			let json: DeleteMessage = { userid: props.msg.userid, ts: props.msg.ts };
+			await fetch("http://127.0.0.1:8080/delete_msg", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(json),
+			});
+		},
+		{
+			onSuccess: () => {
+				qc.invalidateQueries({ queryKey: ["msgs"] });
+				qc.invalidateQueries({ queryKey: ["me"] });
+			},
+		}
+	);
+
+	let utc = new Date(props.msg.ts);
 
 	return (
 		<div class="flex flex-col border-b border-b-gray-800 p-2">
 			<div class="flex gap-2 items-center">
-				<div class="font-bold">{props.userid}</div>
+				<div class="font-bold">{props.msg.userid}</div>
 				<div class="text-gray-600 text-sm">{utc.toLocaleString()}</div>
 			</div>
-			<div>{props.content}</div>
+			<div>{props.msg.content}</div>
+			<div class="flex gap-4 items-center">
+				<button class="text-gray-600 hover:text-pink-400">
+					<HeartButton />
+				</button>
+				<Show when={props.userid === props.msg.userid}>
+					<button
+						class="text-gray-600 hover:text-red-700"
+						onclick={() => delete_msg.mutate()}
+					>
+						<DeleteButton />
+					</button>
+				</Show>
+			</div>
 		</div>
 	);
 };

@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -21,4 +22,11 @@ pub struct CheckUser {
 pub struct UserMessage {
     pub content: String,
     pub userid: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct DeleteMessage {
+    pub userid: String,
+    pub ts: DateTime<Utc>,
 }
