@@ -31,7 +31,7 @@ const App: Component = () => {
 					<div class="border-b border-b-gray-600 w-full">
 						<CreateMsg userid={user().name} />
 					</div>
-					<Messages />
+					<Messages user={user().name} />
 				</div>
 			</div>
 		</div>

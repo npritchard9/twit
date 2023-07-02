@@ -3,12 +3,12 @@ import { Switch, Match, For } from "solid-js";
 import { User } from "./User";
 import { Person } from "../../bindings/Person";
 
-async function fetchUsers() {
-	let users: Person[] = await (await fetch("http://127.0.0.1:8080/users")).json();
-	return users;
-}
-
 export default function Users() {
+	async function fetchUsers() {
+		let users: Person[] = await (await fetch("http://127.0.0.1:8080/users")).json();
+		console.log("users", users);
+		return users;
+	}
 	const user_query = createQuery(() => ["users"], fetchUsers);
 
 	return (

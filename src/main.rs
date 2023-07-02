@@ -2,7 +2,7 @@ use actix_cors::Cors;
 use actix_web::{
     get,
     middleware::Logger,
-    web::{self, post, resource, Data, Json},
+    web::{self, post, resource, Data, Json, Path},
     App, HttpResponse, HttpServer, Responder,
 };
 use dockerprac::{
@@ -106,6 +106,29 @@ async fn get_msgs(pool: Data<PgPool>) -> impl Responder {
     }
 }
 
+#[get("/user/{user}")]
+async fn get_me(user: Path<String>, pool: Data<PgPool>) -> impl Responder {
+    log::info!("Request to /{user}");
+    let mut conn = pool
+        .acquire()
+        .await
+        .expect("To be able to connect to the pool");
+    match sqlx::query_as!(
+        Message,
+        r"select * from message where userid = ($1)",
+        &user.to_string()
+    )
+    .fetch_all(&mut conn)
+    .await
+    {
+        Ok(user) => HttpResponse::Ok().json(user),
+        Err(e) => {
+            println!("Failed to execute query: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
 #[get("/users")]
 async fn get_users(pool: Data<PgPool>) -> impl Responder {
     log::info!("Request to /users");
@@ -117,9 +140,12 @@ async fn get_users(pool: Data<PgPool>) -> impl Responder {
         .fetch_all(&mut conn)
         .await
     {
-        Ok(msgs) => HttpResponse::Ok().json(msgs),
+        Ok(users) => {
+            log::info!("THE USERS ARE: {users:?}");
+            HttpResponse::Ok().json(users)
+        }
         Err(e) => {
-            println!("Failed to execute query: {}", e);
+            log::info!("Failed to execute query: {}", e);
             HttpResponse::InternalServerError().finish()
         }
     }
@@ -136,6 +162,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(cors)
             .service(get_msgs)
+            .service(get_me)
             .service(get_users)
             .service(resource("/user_exists").route(post().to(user_exists)))
             .service(resource("/create_user").route(post().to(create_user)))
