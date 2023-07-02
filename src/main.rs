@@ -94,7 +94,7 @@ async fn get_msgs(pool: Data<PgPool>) -> impl Responder {
         .acquire()
         .await
         .expect("To be able to connect to the pool");
-    match sqlx::query_as!(Message, r"select * from message")
+    match sqlx::query_as!(Message, r"select * from message order by ts desc")
         .fetch_all(&mut conn)
         .await
     {
@@ -115,7 +115,7 @@ async fn get_me(user: Path<String>, pool: Data<PgPool>) -> impl Responder {
         .expect("To be able to connect to the pool");
     match sqlx::query_as!(
         Message,
-        r"select * from message where userid = ($1)",
+        r"select * from message where userid = ($1) order by ts desc",
         &user.to_string()
     )
     .fetch_all(&mut conn)
@@ -136,7 +136,7 @@ async fn get_users(pool: Data<PgPool>) -> impl Responder {
         .acquire()
         .await
         .expect("To be able to connect to the pool");
-    match sqlx::query_as!(Person, r"select * from person")
+    match sqlx::query_as!(Person, r"select * from person order by name")
         .fetch_all(&mut conn)
         .await
     {

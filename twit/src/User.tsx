@@ -7,12 +7,7 @@ const [password, setPassword] = createSignal("");
 const [bio, setBio] = createSignal("");
 
 export function User(props: Person) {
-	return (
-		<div class="flex flex-col mb-4">
-			<div class="text-2xl font-bold">{props.name}</div>
-			<div>{props.bio}</div>
-		</div>
-	);
+	return <div class="text-2xl font-bold ml-4 h-16 flex items-center">{props.name}</div>;
 }
 
 export function EditUser(props: Person) {

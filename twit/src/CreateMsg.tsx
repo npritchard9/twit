@@ -22,6 +22,7 @@ export default function CreateMsg(props: { userid: string }) {
 			onSuccess: () => {
 				setMsg("");
 				qc.invalidateQueries({ queryKey: ["msgs"] });
+				qc.invalidateQueries({ queryKey: ["me"] });
 			},
 		}
 	);
@@ -30,7 +31,7 @@ export default function CreateMsg(props: { userid: string }) {
 		msg_mutation.mutate();
 	};
 	return (
-		<div class="flex items-center justify-center gap-4 mb-4">
+		<div class="flex items-center justify-center h-16">
 			<Switch>
 				<Match when={msg_mutation.isLoading}>
 					<div>Posting...</div>
