@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -27,6 +26,12 @@ pub struct UserMessage {
 #[derive(Debug, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct DeleteMessage {
-    pub userid: String,
-    pub ts: DateTime<Utc>,
+    pub id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct LikeMessage {
+    pub id: String,
+    pub like: bool,
 }

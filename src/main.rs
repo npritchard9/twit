@@ -7,7 +7,7 @@ use actix_web::{
 };
 use dockerprac::{
     db::get_db,
-    models::{CheckUser, DeleteMessage, IncomingUser, Message, Person, UserMessage},
+    models::{CheckUser, DeleteMessage, IncomingUser, LikeMessage, Message, Person, UserMessage},
 };
 use env_logger::Env;
 use sqlx::PgPool;
@@ -66,12 +66,14 @@ async fn create_msg(msg: Json<UserMessage>, pool: Data<PgPool>) -> impl Responde
 
     match sqlx::query!(
         r#"
-        INSERT INTO message (content, userid, ts)
-        VALUES ($1, $2, $3)
+        INSERT INTO message
+        VALUES ($1, $2, $3, $4, $5)
         "#,
         msg.content,
         msg.userid,
-        msg.ts
+        msg.ts,
+        msg.likes,
+        msg.id,
     )
     .execute(pool.get_ref())
     .await
@@ -92,16 +94,52 @@ async fn delete_msg(msg: Json<DeleteMessage>, pool: Data<PgPool>) -> impl Respon
 
     match sqlx::query!(
         r#"
-        DELETE FROM message WHERE userid = $1 and ts = $2 
+        DELETE FROM message WHERE id = $1
         "#,
-        msg.userid,
-        msg.ts
+        msg.id,
     )
     .execute(pool.get_ref())
     .await
     {
         Ok(_) => {
             log::info!("Successfully deleted a msg");
+            HttpResponse::Ok().finish()
+        }
+        Err(e) => {
+            println!("Failed to execute query: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+async fn like_msg(msg: Json<LikeMessage>, pool: Data<PgPool>) -> impl Responder {
+    log::info!("Received {:?}", msg);
+
+    let query = match msg.like {
+        true => {
+            sqlx::query!(
+                r#"
+                UPDATE message set likes = likes + 1 WHERE id = $1 
+                "#,
+                msg.id
+            )
+            .execute(pool.get_ref())
+            .await
+        }
+        false => {
+            sqlx::query!(
+                r#"
+                UPDATE message set likes = likes - 1 WHERE id = $1 
+                "#,
+                msg.id
+            )
+            .execute(pool.get_ref())
+            .await
+        }
+    };
+    match query {
+        Ok(_) => {
+            log::info!("Successfully (un)liked a msg");
             HttpResponse::Ok().finish()
         }
         Err(e) => {
@@ -192,6 +230,7 @@ async fn main() -> std::io::Result<()> {
             .service(resource("/create_user").route(post().to(create_user)))
             .service(resource("/create_msg").route(post().to(create_msg)))
             .service(resource("/delete_msg").route(post().to(delete_msg)))
+            .service(resource("/like_msg").route(post().to(like_msg)))
     })
     .bind(("127.0.0.1", 8080))?
     .run()

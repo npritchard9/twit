@@ -1,7 +1,8 @@
 import { createMutation, createQuery, useQueryClient } from "@tanstack/solid-query";
-import { Switch, Match, For, createSignal, Show } from "solid-js";
+import { Switch, Match, For, createSignal, Show, createEffect } from "solid-js";
 import { Message } from "../../bindings/Message";
 import { DeleteMessage } from "../../bindings/DeleteMessage";
+import { LikeMessage } from "../../bindings/LikeMessage";
 import { DeleteButton, HeartButton } from "./assets/svgs";
 
 type View = "All" | "Me";
@@ -90,11 +91,31 @@ type MsgProps = {
 };
 
 const Msg = (props: MsgProps) => {
+	const [like, setLike] = createSignal(false);
 	const qc = useQueryClient();
 	const delete_msg = createMutation(
 		async () => {
-			let json: DeleteMessage = { userid: props.msg.userid, ts: props.msg.ts };
+			let json: DeleteMessage = { id: props.msg.id };
 			await fetch("http://127.0.0.1:8080/delete_msg", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(json),
+			});
+		},
+		{
+			onSuccess: () => {
+				qc.invalidateQueries({ queryKey: ["msgs"] });
+				qc.invalidateQueries({ queryKey: ["me"] });
+			},
+		}
+	);
+
+	const like_msg = createMutation(
+		async () => {
+			let json: LikeMessage = { id: props.msg.id, like: like() };
+			await fetch("http://127.0.0.1:8080/like_msg", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -120,8 +141,17 @@ const Msg = (props: MsgProps) => {
 			</div>
 			<div>{props.msg.content}</div>
 			<div class="flex gap-4 items-center">
-				<button class="text-gray-600 hover:text-pink-400">
-					<HeartButton />
+				<button
+					class="text-gray-600 hover:text-pink-400"
+					onclick={() => {
+						setLike(p => !p);
+						like_msg.mutate();
+					}}
+				>
+					<div class="flex gap-2 items-center">
+						<HeartButton />
+						{props.msg.likes.toString()}
+					</div>
 				</button>
 				<Show when={props.userid === props.msg.userid}>
 					<button

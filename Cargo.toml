@@ -16,3 +16,4 @@ log = "0.4.19"
 serde = { version = "1.0.164", features = ["derive"] }
 sqlx = { version = "0.6.3", features = ["runtime-actix-rustls", "postgres", "chrono"] }
 ts-rs = { version = "6.2.1", features = ["chrono", "chrono-impl"] }
+uuid = { version = "1.4.0", features = ["serde", "v4"] }
