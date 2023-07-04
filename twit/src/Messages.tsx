@@ -3,7 +3,8 @@ import { Switch, Match, For, createSignal, Show, createEffect } from "solid-js";
 import { Message } from "../../bindings/Message";
 import { DeleteMessage } from "../../bindings/DeleteMessage";
 import { LikeMessage } from "../../bindings/LikeMessage";
-import { DeleteButton, HeartButton } from "./assets/svgs";
+import { ReplyMessage } from "../../bindings/ReplyMessage";
+import { DeleteButton, HeartButton, ReplyButton } from "./assets/svgs";
 
 type View = "All" | "Me";
 
@@ -131,6 +132,29 @@ const Msg = (props: MsgProps) => {
 		}
 	);
 
+	const reply_msg = createMutation(
+		async () => {
+			let json: ReplyMessage = {
+				msgid: props.msg.id,
+				userid: props.userid,
+				content: "hello",
+			};
+			await fetch("http://127.0.0.1:8080/reply_msg", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(json),
+			});
+		},
+		{
+			onSuccess: () => {
+				qc.invalidateQueries({ queryKey: ["msgs"] });
+				qc.invalidateQueries({ queryKey: ["me"] });
+			},
+		}
+	);
+
 	let utc = new Date(props.msg.ts);
 
 	return (
@@ -141,6 +165,9 @@ const Msg = (props: MsgProps) => {
 			</div>
 			<div>{props.msg.content}</div>
 			<div class="flex gap-4 items-center">
+				<button class="text-gray-600 hover:text-sky-700" onclick={() => reply_msg.mutate()}>
+					<ReplyButton />
+				</button>
 				<button
 					class="text-gray-600 hover:text-pink-400"
 					onclick={() => {

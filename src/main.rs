@@ -7,7 +7,10 @@ use actix_web::{
 };
 use dockerprac::{
     db::get_db,
-    models::{CheckUser, DeleteMessage, IncomingUser, LikeMessage, Message, Person, UserMessage},
+    models::{
+        CheckUser, DeleteMessage, IncomingUser, LikeMessage, Message, Person, Reply, ReplyMessage,
+        UserMessage,
+    },
 };
 use env_logger::Env;
 use sqlx::PgPool;
@@ -80,6 +83,52 @@ async fn create_msg(msg: Json<UserMessage>, pool: Data<PgPool>) -> impl Responde
     {
         Ok(_) => {
             log::info!("Successfully created a new msg");
+            HttpResponse::Ok().finish()
+        }
+        Err(e) => {
+            println!("Failed to execute query: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+async fn reply_msg(msg: Json<ReplyMessage>, pool: Data<PgPool>) -> impl Responder {
+    log::info!("Received {:?}", msg);
+
+    let reply = Reply::new(msg.userid.clone(), msg.msgid.clone(), msg.content.clone());
+
+    let mut tx = pool.begin().await.expect("Unable to begin transaction");
+
+    sqlx::query!(
+        r#"
+        INSERT INTO reply
+        VALUES ($1, $2, $3, $4, $5, $6)
+        "#,
+        reply.content,
+        reply.userid,
+        reply.ts,
+        reply.likes,
+        reply.id,
+        reply.msgid,
+    )
+    .execute(&mut tx)
+    .await
+    .expect("unable to add reply");
+
+    sqlx::query!(
+        r#"
+        UPDATE message set replies = ARRAY_APPEND(replies, $1)
+        WHERE id = $2
+        "#,
+        reply.id,
+        reply.msgid
+    )
+    .execute(&mut tx)
+    .await
+    .expect("unable to add reply");
+    match tx.commit().await {
+        Ok(_) => {
+            log::info!("Successfully created a new reply");
             HttpResponse::Ok().finish()
         }
         Err(e) => {
@@ -231,6 +280,7 @@ async fn main() -> std::io::Result<()> {
             .service(resource("/create_msg").route(post().to(create_msg)))
             .service(resource("/delete_msg").route(post().to(delete_msg)))
             .service(resource("/like_msg").route(post().to(like_msg)))
+            .service(resource("/reply_msg").route(post().to(reply_msg)))
     })
     .bind(("127.0.0.1", 8080))?
     .run()

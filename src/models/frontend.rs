@@ -35,3 +35,11 @@ pub struct LikeMessage {
     pub id: String,
     pub like: bool,
 }
+
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ReplyMessage {
+    pub msgid: String,
+    pub content: String,
+    pub userid: String,
+}
