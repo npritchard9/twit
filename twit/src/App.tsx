@@ -29,7 +29,7 @@ const App: Component = () => {
 				</div>
 				<div class="flex flex-col items-center justify-start col-span-3 h-full w-full">
 					<div class="border-b border-b-gray-600 w-full">
-						<CreateMsg userid={user().name} />
+						<CreateMsg user={user().name} />
 					</div>
 					<Messages user={user().name} />
 				</div>

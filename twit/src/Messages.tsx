@@ -1,31 +1,37 @@
 import { createMutation, createQuery, useQueryClient } from "@tanstack/solid-query";
-import { Switch, Match, For, createSignal, Show, createEffect } from "solid-js";
-import { Message } from "../../bindings/Message";
+import { Switch, Match, For, createSignal, Show, Setter } from "solid-js";
+import { DBMessage } from "../../bindings/DBMessage";
 import { DeleteMessage } from "../../bindings/DeleteMessage";
 import { LikeMessage } from "../../bindings/LikeMessage";
-import { ReplyMessage } from "../../bindings/ReplyMessage";
 import { DeleteButton, HeartButton, ReplyButton } from "./assets/svgs";
+import CreateReply from "./CreateReply";
 
 type View = "All" | "Me";
 
 export default function Messages(props: { user: string }) {
 	const [view, setView] = createSignal<View>("All");
+	const [replying, setReplying] = createSignal<DBMessage | null>();
+
 	async function fetchMe() {
-		let msgs: Message[] = await (
+		let msgs: DBMessage[] = await (
 			await fetch(`http://127.0.0.1:8080/user/${props.user}`)
 		).json();
 		return msgs;
 	}
 
 	async function fetchMsgs() {
-		let msgs: Message[] = await (await fetch("http://127.0.0.1:8080/msgs")).json();
+		let msgs: DBMessage[] = await (await fetch("http://127.0.0.1:8080/msgs")).json();
 		return msgs;
 	}
 	const msg_query = createQuery(() => ["msgs"], fetchMsgs);
 	const me_query = createQuery(() => ["me"], fetchMe);
 
 	return (
-		<div class="flex flex-col items-center justify-center mt-2 px-4 w-full">
+		<div
+			class={`flex flex-col items-center justify-center mt-2 px-4 w-full ${
+				replying ?? "bg-gray-500"
+			}`}
+		>
 			<div class="flex justify-center gap-4 w-full items-center pb-2 border-b border-b-gray-800">
 				<button
 					class={`${
@@ -61,8 +67,19 @@ export default function Messages(props: { user: string }) {
 							</Match>
 							<Match when={me_query.isSuccess}>
 								<For each={me_query.data}>
-									{msg => <Msg msg={msg} userid={props.user} />}
+									{msg => (
+										<Msg msg={msg} usr={props.user} setReplying={setReplying} />
+									)}
 								</For>
+								<Show when={replying()}>
+									<div class="z-10">
+										<CreateReply
+											user={props.user}
+											msg={replying()}
+											setReplying={setReplying}
+										/>
+									</div>
+								</Show>
 							</Match>
 						</Switch>
 					}
@@ -76,8 +93,19 @@ export default function Messages(props: { user: string }) {
 						</Match>
 						<Match when={msg_query.isSuccess}>
 							<For each={msg_query.data}>
-								{msg => <Msg msg={msg} userid={props.user} />}
+								{msg => (
+									<Msg msg={msg} usr={props.user} setReplying={setReplying} />
+								)}
 							</For>
+							<Show when={replying()}>
+								<div class="z-10">
+									<CreateReply
+										user={props.user}
+										msg={replying()}
+										setReplying={setReplying}
+									/>
+								</div>
+							</Show>
 						</Match>
 					</Switch>
 				</Show>
@@ -87,8 +115,9 @@ export default function Messages(props: { user: string }) {
 }
 
 type MsgProps = {
-	msg: Message;
-	userid: string;
+	msg: DBMessage;
+	usr: string;
+	setReplying: Setter<DBMessage | null>;
 };
 
 const Msg = (props: MsgProps) => {
@@ -132,40 +161,22 @@ const Msg = (props: MsgProps) => {
 		}
 	);
 
-	const reply_msg = createMutation(
-		async () => {
-			let json: ReplyMessage = {
-				msgid: props.msg.id,
-				userid: props.userid,
-				content: "hello",
-			};
-			await fetch("http://127.0.0.1:8080/reply_msg", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(json),
-			});
-		},
-		{
-			onSuccess: () => {
-				qc.invalidateQueries({ queryKey: ["msgs"] });
-				qc.invalidateQueries({ queryKey: ["me"] });
-			},
-		}
-	);
-
 	let utc = new Date(props.msg.ts);
 
 	return (
 		<div class="flex flex-col border-b border-b-gray-800 p-2">
 			<div class="flex gap-2 items-center">
-				<div class="font-bold">{props.msg.userid}</div>
+				<div class="font-bold">{props.msg.usr}</div>
 				<div class="text-gray-600 text-sm">{utc.toLocaleString()}</div>
 			</div>
 			<div>{props.msg.content}</div>
 			<div class="flex gap-4 items-center">
-				<button class="text-gray-600 hover:text-sky-700" onclick={() => reply_msg.mutate()}>
+				<button
+					class="text-gray-600 hover:text-sky-700"
+					onclick={() => {
+						props.setReplying(props.msg);
+					}}
+				>
 					<ReplyButton />
 				</button>
 				<button
@@ -180,7 +191,7 @@ const Msg = (props: MsgProps) => {
 						{props.msg.likes.toString()}
 					</div>
 				</button>
-				<Show when={props.userid === props.msg.userid}>
+				<Show when={props.usr === props.msg.usr}>
 					<button
 						class="text-gray-600 hover:text-red-700"
 						onclick={() => delete_msg.mutate()}

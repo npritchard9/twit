@@ -1,16 +1,31 @@
-import { Match, Switch, createSignal } from "solid-js";
+import { Match, Setter, Switch, createSignal } from "solid-js";
 import { SendButton } from "./assets/svgs";
 import { createMutation, useQueryClient } from "@tanstack/solid-query";
-import { UserMessage } from "../../bindings/UserMessage";
+import { ReplyMessage } from "../../bindings/ReplyMessage";
+import { DBMessage } from "../../bindings/DBMessage";
 
 const [msg, setMsg] = createSignal("");
 
-export default function CreateMsg(props: { user: string }) {
+type ReplyProps = {
+	user: string;
+	msg: DBMessage;
+	setReplying: Setter<DBMessage | null>;
+};
+
+export default function CreateReply(props: ReplyProps) {
 	const qc = useQueryClient();
-	const msg_mutation = createMutation(
-		async () => {
-			let json: UserMessage = { usr: props.user, content: msg() };
-			await fetch("http://127.0.0.1:8080/create_msg", {
+
+	const reply_msg = createMutation(
+		async (parentPath: string) => {
+			console.log("id: ", props.msg.id);
+			console.log("path: ", parentPath);
+			let json: ReplyMessage = {
+				id: props.msg.id,
+				usr: props.user,
+				content: msg(),
+				path: (parentPath === null ? "" : parentPath) + props.msg.id,
+			};
+			await fetch("http://127.0.0.1:8080/reply_msg", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -21,23 +36,21 @@ export default function CreateMsg(props: { user: string }) {
 		{
 			onSuccess: () => {
 				setMsg("");
+				props.setReplying(null);
 				qc.invalidateQueries({ queryKey: ["msgs"] });
 				qc.invalidateQueries({ queryKey: ["me"] });
 			},
 		}
 	);
 
-	const post_msg = () => {
-		msg_mutation.mutate();
-	};
 	return (
 		<div class="flex items-center justify-center h-16">
 			<Switch>
-				<Match when={msg_mutation.isLoading}>
+				<Match when={reply_msg.isLoading}>
 					<div>Posting...</div>
 				</Match>
-				<Match when={msg_mutation.isError}>
-					<div>Error: {(msg_mutation.error as Error).message}</div>
+				<Match when={reply_msg.isError}>
+					<div>Error: {(reply_msg.error as Error).message}</div>
 				</Match>
 			</Switch>
 			<input
@@ -50,7 +63,7 @@ export default function CreateMsg(props: { user: string }) {
 			<button
 				class="bg-sky-400 rounded-full p-2 disabled:bg-black disabled:text-gray-600 duration-300 transition-colors"
 				disabled={msg().length === 0}
-				onclick={() => post_msg()}
+				onclick={() => reply_msg.mutate(props.msg.path)}
 			>
 				<SendButton />
 			</button>

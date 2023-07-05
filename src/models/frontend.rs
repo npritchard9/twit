@@ -42,4 +42,5 @@ pub struct ReplyMessage {
     pub id: i64,
     pub content: String,
     pub usr: String,
+    pub path: Option<String>,
 }

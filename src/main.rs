@@ -8,7 +8,7 @@ use actix_web::{
 use dockerprac::{
     db::get_db,
     models::{
-        CheckUser, DBMessage, DeleteMessage, IncomingUser, LikeMessage, Message, Person,
+        CheckUser, DBMessage, DBReply, DeleteMessage, IncomingUser, LikeMessage, Message, Person,
         ReplyMessage, UserMessage,
     },
 };
@@ -65,11 +65,11 @@ async fn create_user(user: Json<IncomingUser>, pool: Data<PgPool>) -> impl Respo
 async fn create_msg(msg: Json<UserMessage>, pool: Data<PgPool>) -> impl Responder {
     log::info!("Received {:?}", msg);
 
-    let msg = Message::new(msg.usr.clone(), msg.content.clone());
+    let msg = Message::new(msg.usr.clone(), msg.content.clone(), None);
 
     match sqlx::query!(
         r#"
-        INSERT INTO message
+        INSERT INTO message (content, usr, ts, likes)
         VALUES ($1, $2, $3, $4)
         "#,
         msg.content,
@@ -94,17 +94,18 @@ async fn create_msg(msg: Json<UserMessage>, pool: Data<PgPool>) -> impl Responde
 async fn reply_msg(msg: Json<ReplyMessage>, pool: Data<PgPool>) -> impl Responder {
     log::info!("Received {:?}", msg);
 
-    let msg = Message::new(msg.usr.clone(), msg.content.clone());
+    let msg = Message::new(msg.usr.clone(), msg.content.clone(), msg.path.clone());
 
     match sqlx::query!(
         r#"
-        INSERT INTO message
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO message (content, usr, ts, likes, path)
+        VALUES ($1, $2, $3, $4, $5)
         "#,
         msg.content,
         msg.usr,
         msg.ts,
         msg.likes,
+        msg.path
     )
     .execute(pool.get_ref())
     .await
@@ -121,7 +122,7 @@ async fn reply_msg(msg: Json<ReplyMessage>, pool: Data<PgPool>) -> impl Responde
 }
 
 async fn delete_msg(msg: Json<DeleteMessage>, pool: Data<PgPool>) -> impl Responder {
-    log::info!("Received {:?}", msg);
+    log::info!("MESSAGE TO DELETE: {:?}", msg);
 
     match sqlx::query!(
         r#"
@@ -187,9 +188,33 @@ async fn get_msgs(pool: Data<PgPool>) -> impl Responder {
         .acquire()
         .await
         .expect("To be able to connect to the pool");
-    match sqlx::query_as!(DBMessage, r"select * from message order by ts desc")
+    match sqlx::query_as!(DBMessage, r"select * from message where path is null order by ts desc")
         .fetch_all(&mut conn)
         .await
+    {
+        Ok(msgs) => HttpResponse::Ok().json(msgs),
+        Err(e) => {
+            println!("Failed to execute query: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+#[get("/msg/{id}")]
+async fn get_replies(id: Path<i64>, pool: Data<PgPool>) -> impl Responder {
+    log::info!("Request to /msg/{id}");
+    let mut conn = pool
+        .acquire()
+        .await
+        .expect("To be able to connect to the pool");
+    match sqlx::query_as!(
+        DBReply,
+        r"WITH base_msgs AS (SELECT * FROM message WHERE path IS NULL)
+        (SELECT * FROM message replies WHERE replies.path ~ ANY(SELECT CAST(id as text) FROM base_msgs))
+	    UNION ALL SELECT * FROM base_msgs"
+    )
+    .fetch_all(&mut conn)
+    .await
     {
         Ok(msgs) => HttpResponse::Ok().json(msgs),
         Err(e) => {
@@ -255,6 +280,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(cors)
             .service(get_msgs)
+            .service(get_replies)
             .service(get_me)
             .service(get_users)
             .service(resource("/user_exists").route(post().to(user_exists)))
