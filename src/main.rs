@@ -188,9 +188,12 @@ async fn get_msgs(pool: Data<PgPool>) -> impl Responder {
         .acquire()
         .await
         .expect("To be able to connect to the pool");
-    match sqlx::query_as!(DBMessage, r"select * from message where path is null order by ts desc")
-        .fetch_all(&mut conn)
-        .await
+    match sqlx::query_as!(
+        DBMessage,
+        r"select * from message where path is null order by ts desc"
+    )
+    .fetch_all(&mut conn)
+    .await
     {
         Ok(msgs) => HttpResponse::Ok().json(msgs),
         Err(e) => {
@@ -208,10 +211,11 @@ async fn get_replies(id: Path<i64>, pool: Data<PgPool>) -> impl Responder {
         .await
         .expect("To be able to connect to the pool");
     match sqlx::query_as!(
-        DBReply,
-        r"WITH base_msgs AS (SELECT * FROM message WHERE path IS NULL)
-        (SELECT * FROM message replies WHERE replies.path ~ ANY(SELECT CAST(id as text) FROM base_msgs))
-	    UNION ALL SELECT * FROM base_msgs"
+        DBMessage,
+        r"SELECT * FROM message WHERE path LIKE $1",
+        id.to_string() //    r"WITH base_msgs AS (SELECT * FROM message WHERE path IS NULL)
+                       //    (SELECT * FROM message replies WHERE replies.path = ANY(SELECT CAST(id as text) FROM base_msgs))
+                       // UNION ALL SELECT * FROM base_msgs"
     )
     .fetch_all(&mut conn)
     .await

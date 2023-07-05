@@ -5,12 +5,15 @@ import { DeleteMessage } from "../../bindings/DeleteMessage";
 import { LikeMessage } from "../../bindings/LikeMessage";
 import { DeleteButton, HeartButton, ReplyButton } from "./assets/svgs";
 import CreateReply from "./CreateReply";
+import Replies from "./Replies";
 
 type View = "All" | "Me";
+const [currMsg, setCurrMsg] = createSignal<DBMessage | null>();
 
 export default function Messages(props: { user: string }) {
 	const [view, setView] = createSignal<View>("All");
 	const [replying, setReplying] = createSignal<DBMessage | null>();
+	const [showReplies, setShowReplies] = createSignal(false);
 
 	async function fetchMe() {
 		let msgs: DBMessage[] = await (
@@ -68,18 +71,34 @@ export default function Messages(props: { user: string }) {
 							<Match when={me_query.isSuccess}>
 								<For each={me_query.data}>
 									{msg => (
-										<Msg msg={msg} usr={props.user} setReplying={setReplying} />
+										<Msg
+											msg={msg}
+											usr={props.user}
+											setReplying={setReplying}
+											setShowReplies={setShowReplies}
+										/>
 									)}
 								</For>
-								<Show when={replying()}>
-									<div class="z-10">
-										<CreateReply
-											user={props.user}
-											msg={replying()}
-											setReplying={setReplying}
-										/>
-									</div>
-								</Show>
+								<Switch>
+									<Match when={replying()}>
+										<div class="z-10">
+											<CreateReply
+												user={props.user}
+												msg={replying()}
+												setReplying={setReplying}
+											/>
+										</div>
+									</Match>
+									<Match when={showReplies()}>
+										<div>
+											<Replies
+												user={props.user}
+												msg={currMsg()}
+												setShowReplies={setShowReplies}
+											/>
+										</div>
+									</Match>
+								</Switch>
 							</Match>
 						</Switch>
 					}
@@ -94,18 +113,34 @@ export default function Messages(props: { user: string }) {
 						<Match when={msg_query.isSuccess}>
 							<For each={msg_query.data}>
 								{msg => (
-									<Msg msg={msg} usr={props.user} setReplying={setReplying} />
+									<Msg
+										msg={msg}
+										usr={props.user}
+										setReplying={setReplying}
+										setShowReplies={setShowReplies}
+									/>
 								)}
 							</For>
-							<Show when={replying()}>
-								<div class="z-10">
-									<CreateReply
-										user={props.user}
-										msg={replying()}
-										setReplying={setReplying}
-									/>
-								</div>
-							</Show>
+							<Switch>
+								<Match when={replying()}>
+									<div class="z-10">
+										<CreateReply
+											user={props.user}
+											msg={replying()}
+											setReplying={setReplying}
+										/>
+									</div>
+								</Match>
+								<Match when={showReplies()}>
+									<div>
+										<Replies
+											user={props.user}
+											msg={currMsg()}
+											setShowReplies={setShowReplies}
+										/>
+									</div>
+								</Match>
+							</Switch>
 						</Match>
 					</Switch>
 				</Show>
@@ -118,9 +153,10 @@ type MsgProps = {
 	msg: DBMessage;
 	usr: string;
 	setReplying: Setter<DBMessage | null>;
+	setShowReplies: Setter<boolean>;
 };
 
-const Msg = (props: MsgProps) => {
+export const Msg = (props: MsgProps) => {
 	const [like, setLike] = createSignal(false);
 	const qc = useQueryClient();
 	const delete_msg = createMutation(
@@ -164,7 +200,13 @@ const Msg = (props: MsgProps) => {
 	let utc = new Date(props.msg.ts);
 
 	return (
-		<div class="flex flex-col border-b border-b-gray-800 p-2">
+		<div
+			class="flex flex-col border-b border-b-gray-800 p-2"
+			onclick={() => {
+				props.setShowReplies(true);
+				setCurrMsg(props.msg);
+			}}
+		>
 			<div class="flex gap-2 items-center">
 				<div class="font-bold">{props.msg.usr}</div>
 				<div class="text-gray-600 text-sm">{utc.toLocaleString()}</div>
