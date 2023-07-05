@@ -20,26 +20,26 @@ pub struct CheckUser {
 #[ts(export)]
 pub struct UserMessage {
     pub content: String,
-    pub userid: String,
+    pub usr: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct DeleteMessage {
-    pub id: String,
+    pub id: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct LikeMessage {
-    pub id: String,
+    pub id: i64,
     pub like: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct ReplyMessage {
-    pub msgid: String,
+    pub id: i64,
     pub content: String,
-    pub userid: String,
+    pub usr: String,
 }

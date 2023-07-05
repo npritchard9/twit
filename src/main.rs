@@ -8,8 +8,8 @@ use actix_web::{
 use dockerprac::{
     db::get_db,
     models::{
-        CheckUser, DeleteMessage, IncomingUser, LikeMessage, Message, Person, Reply, ReplyMessage,
-        UserMessage,
+        CheckUser, DBMessage, DeleteMessage, IncomingUser, LikeMessage, Message, Person,
+        ReplyMessage, UserMessage,
     },
 };
 use env_logger::Env;
@@ -65,18 +65,17 @@ async fn create_user(user: Json<IncomingUser>, pool: Data<PgPool>) -> impl Respo
 async fn create_msg(msg: Json<UserMessage>, pool: Data<PgPool>) -> impl Responder {
     log::info!("Received {:?}", msg);
 
-    let msg = Message::new(msg.userid.clone(), msg.content.clone());
+    let msg = Message::new(msg.usr.clone(), msg.content.clone());
 
     match sqlx::query!(
         r#"
         INSERT INTO message
-        VALUES ($1, $2, $3, $4, $5)
+        VALUES ($1, $2, $3, $4)
         "#,
         msg.content,
-        msg.userid,
+        msg.usr,
         msg.ts,
         msg.likes,
-        msg.id,
     )
     .execute(pool.get_ref())
     .await
@@ -95,38 +94,21 @@ async fn create_msg(msg: Json<UserMessage>, pool: Data<PgPool>) -> impl Responde
 async fn reply_msg(msg: Json<ReplyMessage>, pool: Data<PgPool>) -> impl Responder {
     log::info!("Received {:?}", msg);
 
-    let reply = Reply::new(msg.userid.clone(), msg.msgid.clone(), msg.content.clone());
+    let msg = Message::new(msg.usr.clone(), msg.content.clone());
 
-    let mut tx = pool.begin().await.expect("Unable to begin transaction");
-
-    sqlx::query!(
+    match sqlx::query!(
         r#"
-        INSERT INTO reply
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO message
+        VALUES ($1, $2, $3, $4)
         "#,
-        reply.content,
-        reply.userid,
-        reply.ts,
-        reply.likes,
-        reply.id,
-        reply.msgid,
+        msg.content,
+        msg.usr,
+        msg.ts,
+        msg.likes,
     )
-    .execute(&mut tx)
+    .execute(pool.get_ref())
     .await
-    .expect("unable to add reply");
-
-    sqlx::query!(
-        r#"
-        UPDATE message set replies = ARRAY_APPEND(replies, $1)
-        WHERE id = $2
-        "#,
-        reply.id,
-        reply.msgid
-    )
-    .execute(&mut tx)
-    .await
-    .expect("unable to add reply");
-    match tx.commit().await {
+    {
         Ok(_) => {
             log::info!("Successfully created a new reply");
             HttpResponse::Ok().finish()
@@ -205,7 +187,7 @@ async fn get_msgs(pool: Data<PgPool>) -> impl Responder {
         .acquire()
         .await
         .expect("To be able to connect to the pool");
-    match sqlx::query_as!(Message, r"select * from message order by ts desc")
+    match sqlx::query_as!(DBMessage, r"select * from message order by ts desc")
         .fetch_all(&mut conn)
         .await
     {
@@ -225,8 +207,8 @@ async fn get_me(user: Path<String>, pool: Data<PgPool>) -> impl Responder {
         .await
         .expect("To be able to connect to the pool");
     match sqlx::query_as!(
-        Message,
-        r"select * from message where userid = ($1) order by ts desc",
+        DBMessage,
+        r"select * from message where usr = ($1) order by ts desc",
         &user.to_string()
     )
     .fetch_all(&mut conn)

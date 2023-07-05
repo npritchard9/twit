@@ -1,28 +1,36 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
-use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, TS)]
 #[ts(export)]
 pub struct Message {
-    pub userid: String,
+    pub usr: String,
     pub content: String,
     pub ts: DateTime<Utc>,
     pub likes: i64,
-    pub id: String,
-    pub replies: Vec<String>,
+    pub path: Option<String>,
 }
 
 impl Message {
-    pub fn new(userid: String, content: String) -> Self {
+    pub fn new(usr: String, content: String) -> Self {
         Message {
-            userid,
+            usr,
             content,
             ts: Utc::now(),
             likes: 0,
-            id: Uuid::new_v4().to_string(),
-            replies: Vec::new(),
+            path: None,
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, TS)]
+#[ts(export)]
+pub struct DBMessage {
+    pub usr: String,
+    pub content: String,
+    pub ts: DateTime<Utc>,
+    pub likes: i64,
+    pub id: i64,
+    pub path: Option<String>,
 }
