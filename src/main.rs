@@ -212,10 +212,8 @@ async fn get_replies(id: Path<i64>, pool: Data<PgPool>) -> impl Responder {
         .expect("To be able to connect to the pool");
     match sqlx::query_as!(
         DBMessage,
-        r"SELECT * FROM message WHERE path LIKE $1",
-        id.to_string() //    r"WITH base_msgs AS (SELECT * FROM message WHERE path IS NULL)
-                       //    (SELECT * FROM message replies WHERE replies.path = ANY(SELECT CAST(id as text) FROM base_msgs))
-                       // UNION ALL SELECT * FROM base_msgs"
+        "SELECT * FROM message WHERE path LIKE $1",
+        format!("%{}%", id.to_string())
     )
     .fetch_all(&mut conn)
     .await
@@ -237,7 +235,7 @@ async fn get_me(user: Path<String>, pool: Data<PgPool>) -> impl Responder {
         .expect("To be able to connect to the pool");
     match sqlx::query_as!(
         DBMessage,
-        r"select * from message where usr = ($1) order by ts desc",
+        r"select * from message where usr = ($1) and path is null order by ts desc",
         &user.to_string()
     )
     .fetch_all(&mut conn)

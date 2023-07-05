@@ -23,7 +23,7 @@ export default function CreateReply(props: ReplyProps) {
 				id: props.msg.id,
 				usr: props.user,
 				content: msg(),
-				path: (parentPath === null ? "" : parentPath) + props.msg.id,
+				path: parentPath === null ? `${props.msg.id}` : `${parentPath}/${props.msg.id}`,
 			};
 			await fetch("http://127.0.0.1:8080/reply_msg", {
 				method: "POST",
