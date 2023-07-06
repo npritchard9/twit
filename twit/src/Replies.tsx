@@ -11,9 +11,8 @@ export default function Replies(props: {
 }) {
 	const [replying, setReplying] = createSignal<DBMessage>();
 	async function fetchReplies() {
-		let msgs: DBMessage[] = await (
-			await fetch(`http://127.0.0.1:8080/msg/${props.msg.id}`)
-		).json();
+		let id = props.msg.path ?? props.msg.id;
+		let msgs: DBMessage[] = await (await fetch(`http://127.0.0.1:8080/msg/${id}`)).json();
 		return msgs;
 	}
 

@@ -1,5 +1,5 @@
 import { createMutation, createQuery, useQueryClient } from "@tanstack/solid-query";
-import { Switch, Match, For, createSignal, Show, Setter } from "solid-js";
+import { Switch, Match, For, createSignal, Show, Setter, createEffect } from "solid-js";
 import { DBMessage } from "../../bindings/DBMessage";
 import { DeleteMessage } from "../../bindings/DeleteMessage";
 import { LikeMessage } from "../../bindings/LikeMessage";
@@ -14,6 +14,10 @@ export default function Messages(props: { user: string }) {
 	const [view, setView] = createSignal<View>("All");
 	const [replying, setReplying] = createSignal<DBMessage | null>();
 	const [showReplies, setShowReplies] = createSignal(false);
+
+	createEffect(() => {
+		console.log("curr msg: ", currMsg());
+	});
 
 	async function fetchMe() {
 		let msgs: DBMessage[] = await (
