@@ -70,10 +70,10 @@ async fn reply_msg(msg: Json<UserReply>, db: Data<Surreal<Db>>) -> impl Responde
     }
 }
 
-async fn delete_msg(msg: Json<String>, db: Data<Surreal<Db>>) -> impl Responder {
-    log::info!("MESSAGE TO DELETE: {:?}", msg);
+async fn delete_msg(post: Json<LikePost>, db: Data<Surreal<Db>>) -> impl Responder {
+    log::info!("MESSAGE TO DELETE: {:?}", post);
 
-    match delete_post(msg.0, &db).await {
+    match delete_post(post.0, &db).await {
         Ok(_) => {
             log::info!("Successfully deleted a msg");
             HttpResponse::Ok().finish()

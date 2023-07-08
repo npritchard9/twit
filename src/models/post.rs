@@ -7,7 +7,7 @@ use ts_rs::TS;
 #[ts(export)]
 pub struct UserPost {
     pub msg: String,
-    pub likes: u32,
+    pub likes: i32,
     pub user: String,
 }
 
@@ -15,7 +15,7 @@ pub struct UserPost {
 #[ts(export)]
 pub struct DBPost {
     pub msg: String,
-    pub likes: u32,
+    pub likes: i32,
     pub ts: DateTime<Utc>,
     #[ts(type = "string")]
     pub id: RecordId,
@@ -25,7 +25,7 @@ pub struct DBPost {
 #[ts(export)]
 pub struct UserReply {
     pub msg: String,
-    pub likes: u32,
+    pub likes: i32,
     pub user: String,
     pub postid: String,
 }

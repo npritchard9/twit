@@ -74,7 +74,7 @@ export default function Messages(props: { user: string }) {
 									{msg => (
 										<Msg
 											msg={msg}
-											usr={props.user}
+											user={props.user}
 											setReplying={setReplying}
 											setShowReplies={setShowReplies}
 										/>
@@ -116,7 +116,7 @@ export default function Messages(props: { user: string }) {
 								{msg => (
 									<Msg
 										msg={msg}
-										usr={props.user}
+										user={props.user}
 										setReplying={setReplying}
 										setShowReplies={setShowReplies}
 									/>
@@ -162,7 +162,7 @@ export const Msg = (props: MsgProps) => {
 	const qc = useQueryClient();
 	const delete_msg = createMutation(
 		async () => {
-			let json = { id: props.msg.id };
+			let json: LikePost = { id: props.msg.id, user: props.user };
 			await fetch("http://127.0.0.1:8080/delete_msg", {
 				method: "POST",
 				headers: {
@@ -182,6 +182,7 @@ export const Msg = (props: MsgProps) => {
 	const like_msg = createMutation(
 		async () => {
 			let json: LikePost = { id: props.msg.id, user: props.user };
+			console.log(json);
 			await fetch("http://127.0.0.1:8080/like_msg", {
 				method: "POST",
 				headers: {
@@ -225,7 +226,7 @@ export const Msg = (props: MsgProps) => {
 				<button
 					class="text-gray-600 hover:text-pink-400"
 					onclick={() => {
-						setLike(p => !p);
+						// setLike(p => !p);
 						like_msg.mutate();
 					}}
 				>

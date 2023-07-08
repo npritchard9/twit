@@ -98,23 +98,55 @@ pub async fn insert_reply(reply: UserReply, db: &Surreal<Db>) -> anyhow::Result<
     Ok(())
 }
 
-pub async fn delete_post(post: String, db: &Surreal<Db>) -> anyhow::Result<()> {
-    println!("deleting post: {}", post);
-    let _p: Option<User> = db.delete(("post", post)).await?;
-    Ok(())
-}
-
-pub async fn like_post(post: LikePost, db: &Surreal<Db>) -> anyhow::Result<()> {
-    let _add_like = db
-        .query(format!("update post:{} set likes += 1", &post.id))
-        .await?;
-    let _relate_user = db
+pub async fn delete_post(post: LikePost, db: &Surreal<Db>) -> anyhow::Result<()> {
+    let split: Vec<&str> = post.id.split(":").collect();
+    let _post: Option<DBPost> = db.delete((split[0], split[1])).await?;
+    let _remove_user = db
         .query(format!(
-            "relate user:{}->liked->post:{}",
+            "delete user:{}->wrote where out = {}",
             &post.user, &post.id
         ))
         .await?;
     Ok(())
+}
+
+pub async fn like_post(post: LikePost, db: &Surreal<Db>) -> anyhow::Result<()> {
+    let mut liked_res = db
+        .query(format!(
+            "select value count() from liked where (user:{} = in and {} = out) limit 1",
+            &post.user, &post.id
+        ))
+        .await?;
+    println!("LIKED RES: {:#?}", liked_res);
+    let user_already_liked: Option<i32> = liked_res.take(0)?;
+    println!("USER ALREADY LIKED? {user_already_liked:?}");
+    if let Some(_) = user_already_liked {
+        let _remove_like = db
+            .query(format!("update {} set likes -= 1", &post.id))
+            .await?;
+        let _remove_user = db
+            .query(format!(
+                "delete user:{}->liked where out = {}",
+                &post.user, &post.id
+            ))
+            .await?;
+    } else {
+        let _add_like = db
+            .query(format!("update {} set likes += 1", &post.id))
+            .await?;
+        let _relate_user = db
+            .query(format!("relate user:{}->liked->{}", &post.user, &post.id))
+            .await?;
+    }
+    Ok(())
+}
+
+pub async fn get_likes(user: String, db: &Surreal<Db>) -> anyhow::Result<Vec<DBPost>> {
+    let mut res = db
+        .query(format!("select out.* from liked where user:{} = in", user))
+        .await?;
+    let likes = res.take(0)?;
+    Ok(likes)
 }
 
 pub async fn clear_db(db: &Surreal<Db>) -> anyhow::Result<()> {
