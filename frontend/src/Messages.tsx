@@ -1,7 +1,8 @@
 import { createMutation, createQuery, useQueryClient } from "@tanstack/solid-query";
 import { Switch, Match, For, createSignal, Show, Setter, createEffect } from "solid-js";
-import { DBPost } from "../../bindings/DBPost";
-import { LikePost } from "../../bindings/LikePost";
+import { type DBPost } from "../../bindings/DBPost";
+import { type UserAndPost } from "../../bindings/UserAndPost";
+import { type LikePost } from "../../bindings/LikePost";
 import { DeleteButton, HeartButton, ReplyButton } from "./assets/svgs";
 import CreateReply from "./CreateReply";
 import Replies from "./Replies";
@@ -19,12 +20,14 @@ export default function Messages(props: { user: string }) {
 	});
 
 	async function fetchMe() {
-		let msgs: DBPost[] = await (await fetch(`http://127.0.0.1:8080/user/${props.user}`)).json();
+		let msgs: UserAndPost[] = await (
+			await fetch(`http://127.0.0.1:8080/user/${props.user}`)
+		).json();
 		return msgs;
 	}
 
 	async function fetchMsgs() {
-		let msgs: DBPost[] = await (await fetch("http://127.0.0.1:8080/msgs")).json();
+		let msgs: UserAndPost[] = await (await fetch("http://127.0.0.1:8080/msgs")).json();
 		return msgs;
 	}
 	const msg_query = createQuery(() => ["msgs"], fetchMsgs);
@@ -73,8 +76,8 @@ export default function Messages(props: { user: string }) {
 								<For each={me_query.data}>
 									{msg => (
 										<Msg
-											msg={msg}
-											user={props.user}
+											msg={msg.post}
+											user={msg.user.name}
 											setReplying={setReplying}
 											setShowReplies={setShowReplies}
 										/>
@@ -94,7 +97,7 @@ export default function Messages(props: { user: string }) {
 										<div>
 											<Replies
 												user={props.user}
-												msg={currMsg()}
+												msg={currMsg}
 												setShowReplies={setShowReplies}
 											/>
 										</div>
@@ -115,8 +118,8 @@ export default function Messages(props: { user: string }) {
 							<For each={msg_query.data}>
 								{msg => (
 									<Msg
-										msg={msg}
-										user={props.user}
+										msg={msg.post}
+										user={msg.user.name}
 										setReplying={setReplying}
 										setShowReplies={setShowReplies}
 									/>
@@ -136,7 +139,7 @@ export default function Messages(props: { user: string }) {
 									<div>
 										<Replies
 											user={props.user}
-											msg={currMsg()}
+											msg={currMsg}
 											setShowReplies={setShowReplies}
 										/>
 									</div>
@@ -210,7 +213,7 @@ export const Msg = (props: MsgProps) => {
 			}}
 		>
 			<div class="flex gap-2 items-center">
-				{/*<div class="font-bold">{props.msg}</div>*/}
+				<div class="font-bold">{props.user}</div>
 				<div class="text-gray-600 text-sm">{utc.toLocaleString()}</div>
 			</div>
 			<div>{props.msg.msg}</div>
@@ -226,7 +229,6 @@ export const Msg = (props: MsgProps) => {
 				<button
 					class="text-gray-600 hover:text-pink-400"
 					onclick={() => {
-						// setLike(p => !p);
 						like_msg.mutate();
 					}}
 				>
@@ -235,14 +237,14 @@ export const Msg = (props: MsgProps) => {
 						{props.msg.likes.toString()}
 					</div>
 				</button>
-				{/*<Show when={props.usr === props.msg.usr}>
+				<Show when={props.user === props.user}>
 					<button
 						class="text-gray-600 hover:text-red-700"
 						onclick={() => delete_msg.mutate()}
 					>
 						<DeleteButton />
 					</button>
-				</Show>*/}
+				</Show>
 			</div>
 		</div>
 	);

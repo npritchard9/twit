@@ -1,6 +1,5 @@
 use anyhow::anyhow;
 use surrealdb::engine::local::{Db, File};
-use surrealdb::opt::RecordId;
 use surrealdb::Surreal;
 
 use super::models::*;
@@ -52,15 +51,21 @@ pub async fn get_post(id: String, db: &Surreal<Db>) -> anyhow::Result<DBPost> {
     Ok(post)
 }
 
-pub async fn get_posts(db: &Surreal<Db>) -> anyhow::Result<Vec<DBPost>> {
-    let posts = db.select("post").await?;
+pub async fn get_posts(db: &Surreal<Db>) -> anyhow::Result<Vec<UserAndPost>> {
+    let mut res = db
+        .query("select in.* as user, out.* as post from wrote")
+        .await?;
+    let posts = res.take(0)?;
     Ok(posts)
 }
 
-pub async fn get_posts_from_user(user: String, db: &Surreal<Db>) -> anyhow::Result<Vec<DBPost>> {
+pub async fn get_posts_from_user(
+    user: String,
+    db: &Surreal<Db>,
+) -> anyhow::Result<Vec<UserAndPost>> {
     let mut res = db
         .query(format!(
-            "select value out.* from wrote where in = user:{}",
+            "select in.* as user, out.* as post from wrote where in = user:{}",
             user
         ))
         .await?;
@@ -88,12 +93,6 @@ pub async fn insert_reply(reply: UserReply, db: &Surreal<Db>) -> anyhow::Result<
     let r = insert_post(post, db).await?;
     let _relate_to_post = db
         .query(format!("relate {}->replied->{}", r.id, reply.postid))
-        .await?;
-    let _relate_to_user = db
-        .query(format!(
-            "relate user:{}->wrote->{}",
-            reply.user, reply.postid
-        ))
         .await?;
     Ok(())
 }

@@ -1,18 +1,19 @@
 import { createQuery } from "@tanstack/solid-query";
 import { DBPost } from "../../bindings/DBPost";
-import { For, Match, Setter, Show, Switch, createSignal } from "solid-js";
+import { Accessor, For, Match, Setter, Show, Switch, createSignal } from "solid-js";
 import { Msg } from "./Messages";
 import CreateReply from "./CreateReply";
 
 export default function Replies(props: {
 	user: string;
-	msg: DBPost;
+	msg: Accessor<DBPost>;
 	setShowReplies: Setter<boolean>;
 }) {
+	console.log("REPLIES CUR MSG: ", props.msg());
 	const [replying, setReplying] = createSignal<DBPost>();
 	async function fetchReplies() {
 		let msgs: DBPost[] = await (
-			await fetch(`http://127.0.0.1:8080/msg/${props.msg.id}`)
+			await fetch(`http://127.0.0.1:8080/msg/${props.msg().id}`)
 		).json();
 		return msgs;
 	}
