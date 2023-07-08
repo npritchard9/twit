@@ -5,31 +5,22 @@ use actix_web::{
     web::{self, post, resource, Data, Json, Path},
     App, HttpResponse, HttpServer, Responder,
 };
-use dockerprac::{
-    db::get_db,
-    models::{
-        CheckUser, DBMessage, DBReply, DeleteMessage, IncomingUser, LikeMessage, Message, Person,
-        ReplyMessage, UserMessage,
-    },
-};
 use env_logger::Env;
-use sqlx::PgPool;
+use surrealdb::{engine::local::Db, Surreal};
+use twit::{
+    db::{
+        check_user, clear_db, delete_post, get_all_users, get_db, get_post, get_posts,
+        get_posts_from_user, get_replies_to_post, insert_post, insert_reply, insert_user,
+        like_post,
+    },
+    models::*,
+};
 
-async fn user_exists(user: Json<CheckUser>, pool: Data<PgPool>) -> impl Responder {
+async fn user_exists(user: Json<User>, db: Data<Surreal<Db>>) -> impl Responder {
     log::info!("Received {:?}", user);
 
-    match sqlx::query_as!(
-        Person,
-        r#"
-        SELECT * FROM person WHERE name = $1 and password = $2
-        "#,
-        user.name,
-        user.password,
-    )
-    .fetch_one(pool.get_ref())
-    .await
-    {
-        Ok(p) => HttpResponse::Ok().json(p),
+    match check_user(user.0, &db).await {
+        Ok(u) => HttpResponse::Ok().json(u),
         Err(e) => {
             println!("Failed to execute query: {}", e);
             HttpResponse::InternalServerError().finish()
@@ -37,24 +28,11 @@ async fn user_exists(user: Json<CheckUser>, pool: Data<PgPool>) -> impl Responde
     }
 }
 
-async fn create_user(user: Json<IncomingUser>, pool: Data<PgPool>) -> impl Responder {
+async fn create_user(user: Json<User>, db: Data<Surreal<Db>>) -> impl Responder {
     log::info!("Received {:?}", user);
 
-    let person = Person::new(user.name.clone(), user.password.clone(), user.bio.clone());
-
-    match sqlx::query!(
-        r#"
-        INSERT INTO person (name, password, bio)
-        VALUES ($1, $2, $3)
-        "#,
-        person.name,
-        person.password,
-        person.bio,
-    )
-    .execute(pool.get_ref())
-    .await
-    {
-        Ok(_) => HttpResponse::Ok().json(person),
+    match insert_user(user.0, &db).await {
+        Ok(u) => HttpResponse::Ok().json(u),
         Err(e) => {
             println!("Failed to execute query: {}", e);
             HttpResponse::InternalServerError().finish()
@@ -62,24 +40,10 @@ async fn create_user(user: Json<IncomingUser>, pool: Data<PgPool>) -> impl Respo
     }
 }
 
-async fn create_msg(msg: Json<UserMessage>, pool: Data<PgPool>) -> impl Responder {
+async fn create_msg(msg: Json<UserPost>, db: Data<Surreal<Db>>) -> impl Responder {
     log::info!("Received {:?}", msg);
 
-    let msg = Message::new(msg.usr.clone(), msg.content.clone(), None);
-
-    match sqlx::query!(
-        r#"
-        INSERT INTO message (content, usr, ts, likes)
-        VALUES ($1, $2, $3, $4)
-        "#,
-        msg.content,
-        msg.usr,
-        msg.ts,
-        msg.likes,
-    )
-    .execute(pool.get_ref())
-    .await
-    {
+    match insert_post(msg.0, &db).await {
         Ok(_) => {
             log::info!("Successfully created a new msg");
             HttpResponse::Ok().finish()
@@ -91,25 +55,10 @@ async fn create_msg(msg: Json<UserMessage>, pool: Data<PgPool>) -> impl Responde
     }
 }
 
-async fn reply_msg(msg: Json<ReplyMessage>, pool: Data<PgPool>) -> impl Responder {
+async fn reply_msg(msg: Json<UserReply>, db: Data<Surreal<Db>>) -> impl Responder {
     log::info!("Received {:?}", msg);
 
-    let msg = Message::new(msg.usr.clone(), msg.content.clone(), msg.path.clone());
-
-    match sqlx::query!(
-        r#"
-        INSERT INTO message (content, usr, ts, likes, path)
-        VALUES ($1, $2, $3, $4, $5)
-        "#,
-        msg.content,
-        msg.usr,
-        msg.ts,
-        msg.likes,
-        msg.path
-    )
-    .execute(pool.get_ref())
-    .await
-    {
+    match insert_reply(msg.0, &db).await {
         Ok(_) => {
             log::info!("Successfully created a new reply");
             HttpResponse::Ok().finish()
@@ -121,18 +70,10 @@ async fn reply_msg(msg: Json<ReplyMessage>, pool: Data<PgPool>) -> impl Responde
     }
 }
 
-async fn delete_msg(msg: Json<DeleteMessage>, pool: Data<PgPool>) -> impl Responder {
+async fn delete_msg(msg: Json<String>, db: Data<Surreal<Db>>) -> impl Responder {
     log::info!("MESSAGE TO DELETE: {:?}", msg);
 
-    match sqlx::query!(
-        r#"
-        DELETE FROM message WHERE id = $1
-        "#,
-        msg.id,
-    )
-    .execute(pool.get_ref())
-    .await
-    {
+    match delete_post(msg.0, &db).await {
         Ok(_) => {
             log::info!("Successfully deleted a msg");
             HttpResponse::Ok().finish()
@@ -144,32 +85,10 @@ async fn delete_msg(msg: Json<DeleteMessage>, pool: Data<PgPool>) -> impl Respon
     }
 }
 
-async fn like_msg(msg: Json<LikeMessage>, pool: Data<PgPool>) -> impl Responder {
-    log::info!("Received {:?}", msg);
+async fn like_msg(post: Json<LikePost>, db: Data<Surreal<Db>>) -> impl Responder {
+    log::info!("Received {:?}", post);
 
-    let query = match msg.like {
-        true => {
-            sqlx::query!(
-                r#"
-                UPDATE message set likes = likes + 1 WHERE id = $1 
-                "#,
-                msg.id
-            )
-            .execute(pool.get_ref())
-            .await
-        }
-        false => {
-            sqlx::query!(
-                r#"
-                UPDATE message set likes = likes - 1 WHERE id = $1 
-                "#,
-                msg.id
-            )
-            .execute(pool.get_ref())
-            .await
-        }
-    };
-    match query {
+    match like_post(post.0, &db).await {
         Ok(_) => {
             log::info!("Successfully (un)liked a msg");
             HttpResponse::Ok().finish()
@@ -182,19 +101,9 @@ async fn like_msg(msg: Json<LikeMessage>, pool: Data<PgPool>) -> impl Responder 
 }
 
 #[get("/msgs")]
-async fn get_msgs(pool: Data<PgPool>) -> impl Responder {
+async fn get_msgs(db: Data<Surreal<Db>>) -> impl Responder {
     log::info!("Request to /msgs");
-    let mut conn = pool
-        .acquire()
-        .await
-        .expect("To be able to connect to the pool");
-    match sqlx::query_as!(
-        DBMessage,
-        r"select * from message where path is null order by ts desc"
-    )
-    .fetch_all(&mut conn)
-    .await
-    {
+    match get_posts(&db).await {
         Ok(msgs) => HttpResponse::Ok().json(msgs),
         Err(e) => {
             println!("Failed to execute query: {}", e);
@@ -204,21 +113,10 @@ async fn get_msgs(pool: Data<PgPool>) -> impl Responder {
 }
 
 #[get("/msg/{id}")]
-async fn get_replies(id: Path<i64>, pool: Data<PgPool>) -> impl Responder {
+async fn get_replies(id: Path<String>, db: Data<Surreal<Db>>) -> impl Responder {
     log::info!("Request to /msg/{id}");
-    let mut conn = pool
-        .acquire()
-        .await
-        .expect("To be able to connect to the pool");
-    match sqlx::query_as!(
-        DBMessage,
-        "SELECT * FROM message WHERE path LIKE $1",
-        format!("%{}%", id.to_string())
-    )
-    .fetch_all(&mut conn)
-    .await
-    {
-        Ok(msgs) => HttpResponse::Ok().json(msgs),
+    match get_replies_to_post(id.to_string(), &db).await {
+        Ok(msg) => HttpResponse::Ok().json(msg),
         Err(e) => {
             println!("Failed to execute query: {}", e);
             HttpResponse::InternalServerError().finish()
@@ -227,20 +125,9 @@ async fn get_replies(id: Path<i64>, pool: Data<PgPool>) -> impl Responder {
 }
 
 #[get("/user/{user}")]
-async fn get_me(user: Path<String>, pool: Data<PgPool>) -> impl Responder {
+async fn get_me(user: Path<String>, db: Data<Surreal<Db>>) -> impl Responder {
     log::info!("Request to /{user}");
-    let mut conn = pool
-        .acquire()
-        .await
-        .expect("To be able to connect to the pool");
-    match sqlx::query_as!(
-        DBMessage,
-        r"select * from message where usr = ($1) and path is null order by ts desc",
-        &user.to_string()
-    )
-    .fetch_all(&mut conn)
-    .await
-    {
+    match get_posts_from_user(user.to_string(), &db).await {
         Ok(user) => HttpResponse::Ok().json(user),
         Err(e) => {
             println!("Failed to execute query: {}", e);
@@ -250,16 +137,9 @@ async fn get_me(user: Path<String>, pool: Data<PgPool>) -> impl Responder {
 }
 
 #[get("/users")]
-async fn get_users(pool: Data<PgPool>) -> impl Responder {
+async fn get_users(db: Data<Surreal<Db>>) -> impl Responder {
     log::info!("Request to /users");
-    let mut conn = pool
-        .acquire()
-        .await
-        .expect("To be able to connect to the pool");
-    match sqlx::query_as!(Person, r"select * from person order by name")
-        .fetch_all(&mut conn)
-        .await
-    {
+    match get_all_users(&db).await {
         Ok(users) => {
             log::info!("THE USERS ARE: {users:?}");
             HttpResponse::Ok().json(users)
@@ -274,11 +154,11 @@ async fn get_users(pool: Data<PgPool>) -> impl Responder {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
-    let pool = get_db().await.expect("The db to exist");
+    let db = get_db().await.expect("The db to exist");
     HttpServer::new(move || {
         let cors = Cors::permissive();
         App::new()
-            .app_data(web::Data::new(pool.clone()))
+            .app_data(web::Data::new(db.clone()))
             .wrap(Logger::default())
             .wrap(cors)
             .service(get_msgs)

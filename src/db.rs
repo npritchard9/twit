@@ -1,12 +1,124 @@
-use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
-use std::env;
+use anyhow::anyhow;
+use surrealdb::engine::local::{Db, File};
+use surrealdb::opt::RecordId;
+use surrealdb::Surreal;
 
-pub async fn get_db() -> Result<Pool<Postgres>, anyhow::Error> {
-    dotenvy::dotenv()?;
-    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL needs to exist");
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&db_url)
+use super::models::*;
+
+pub async fn get_db() -> surrealdb::Result<Surreal<Db>> {
+    let db = Surreal::new::<File>("posts.db").await?;
+    db.use_ns("my_ns").use_db("my_db").await?;
+    Ok(db)
+}
+
+pub async fn get_all_users(db: &Surreal<Db>) -> anyhow::Result<Vec<User>> {
+    let users = db.select("user").await?;
+    Ok(users)
+}
+
+pub async fn check_user(user: User, db: &Surreal<Db>) -> anyhow::Result<User> {
+    let u = db.select(("user", user.name)).await?;
+    Ok(u)
+}
+
+pub async fn insert_user(user: User, db: &Surreal<Db>) -> anyhow::Result<User> {
+    let u = db.create(("user", user.name.clone())).content(user).await?;
+    Ok(u)
+}
+
+pub async fn insert_post(post: UserPost, db: &Surreal<Db>) -> anyhow::Result<DBPost> {
+    let mut res = db
+        .query(format!(
+            "create post set msg = '{}', likes = 0, ts = time::now()",
+            post.msg
+        ))
         .await?;
-    Ok(pool)
+    let p: Option<DBPost> = res.take(0)?;
+    match p {
+        Some(m) => {
+            println!("CREATED POST: {m:?}");
+            let _relate = db
+                .query(format!("relate user:{}->wrote->{}", post.user, m.id))
+                .await?;
+            Ok(m)
+        }
+        None => Err(anyhow!("Unable to create a post")),
+    }
+}
+
+pub async fn get_post(id: String, db: &Surreal<Db>) -> anyhow::Result<DBPost> {
+    let split: Vec<&str> = id.split(":").collect();
+    let post: DBPost = db.select((split[0], split[1])).await?;
+    Ok(post)
+}
+
+pub async fn get_posts(db: &Surreal<Db>) -> anyhow::Result<Vec<DBPost>> {
+    let posts = db.select("post").await?;
+    Ok(posts)
+}
+
+pub async fn get_posts_from_user(user: String, db: &Surreal<Db>) -> anyhow::Result<Vec<DBPost>> {
+    let mut res = db
+        .query(format!(
+            "select value out.* from wrote where in = user:{}",
+            user
+        ))
+        .await?;
+    let posts = res.take(0)?;
+    Ok(posts)
+}
+
+pub async fn get_replies_to_post(postid: String, db: &Surreal<Db>) -> anyhow::Result<Vec<DBPost>> {
+    let mut replies = db
+        .query(format!(
+            "select value in.* from replied where {} = out",
+            postid
+        ))
+        .await?;
+    let r = replies.take(0)?;
+    Ok(r)
+}
+
+pub async fn insert_reply(reply: UserReply, db: &Surreal<Db>) -> anyhow::Result<()> {
+    let post = UserPost {
+        msg: reply.msg,
+        likes: 0,
+        user: reply.user.clone(),
+    };
+    let r = insert_post(post, db).await?;
+    let _relate_to_post = db
+        .query(format!("relate {}->replied->{}", r.id, reply.postid))
+        .await?;
+    let _relate_to_user = db
+        .query(format!(
+            "relate user:{}->wrote->{}",
+            reply.user, reply.postid
+        ))
+        .await?;
+    Ok(())
+}
+
+pub async fn delete_post(post: String, db: &Surreal<Db>) -> anyhow::Result<()> {
+    println!("deleting post: {}", post);
+    let _p: Option<User> = db.delete(("post", post)).await?;
+    Ok(())
+}
+
+pub async fn like_post(post: LikePost, db: &Surreal<Db>) -> anyhow::Result<()> {
+    let _add_like = db
+        .query(format!("update post:{} set likes += 1", &post.id))
+        .await?;
+    let _relate_user = db
+        .query(format!(
+            "relate user:{}->liked->post:{}",
+            &post.user, &post.id
+        ))
+        .await?;
+    Ok(())
+}
+
+pub async fn clear_db(db: &Surreal<Db>) -> anyhow::Result<()> {
+    let _posts: Vec<DBPost> = db.delete("post").await?;
+    let _users: Vec<User> = db.delete("user").await?;
+    Ok(())
 }

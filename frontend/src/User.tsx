@@ -1,20 +1,20 @@
 import { Match, Switch, createSignal } from "solid-js";
 import { createMutation, useQueryClient } from "@tanstack/solid-query";
-import { Person } from "../../bindings/Person";
+import { type User } from "../../bindings/User";
 
 const [username, setUsername] = createSignal("");
 const [password, setPassword] = createSignal("");
 const [bio, setBio] = createSignal("");
 
-export function User(props: Person) {
+export function UserInfo(props: User) {
 	return <div class="text-2xl font-bold ml-4 h-16 flex items-center">{props.name}</div>;
 }
 
-export function EditUser(props: Person) {
+export function EditUser(props: User) {
 	const qc = useQueryClient();
 	const user_mutation = createMutation(
 		async () => {
-			let json: Person = {
+			let json: User = {
 				name: username(),
 				password: password(),
 				bio: bio(),

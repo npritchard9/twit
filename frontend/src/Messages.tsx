@@ -1,18 +1,17 @@
 import { createMutation, createQuery, useQueryClient } from "@tanstack/solid-query";
 import { Switch, Match, For, createSignal, Show, Setter, createEffect } from "solid-js";
-import { DBMessage } from "../../bindings/DBMessage";
-import { DeleteMessage } from "../../bindings/DeleteMessage";
-import { LikeMessage } from "../../bindings/LikeMessage";
+import { DBPost } from "../../bindings/DBPost";
+import { LikePost } from "../../bindings/LikePost";
 import { DeleteButton, HeartButton, ReplyButton } from "./assets/svgs";
 import CreateReply from "./CreateReply";
 import Replies from "./Replies";
 
 type View = "All" | "Me";
-const [currMsg, setCurrMsg] = createSignal<DBMessage | null>();
+const [currMsg, setCurrMsg] = createSignal<DBPost | null>();
 
 export default function Messages(props: { user: string }) {
 	const [view, setView] = createSignal<View>("All");
-	const [replying, setReplying] = createSignal<DBMessage | null>();
+	const [replying, setReplying] = createSignal<DBPost | null>();
 	const [showReplies, setShowReplies] = createSignal(false);
 
 	createEffect(() => {
@@ -20,14 +19,12 @@ export default function Messages(props: { user: string }) {
 	});
 
 	async function fetchMe() {
-		let msgs: DBMessage[] = await (
-			await fetch(`http://127.0.0.1:8080/user/${props.user}`)
-		).json();
+		let msgs: DBPost[] = await (await fetch(`http://127.0.0.1:8080/user/${props.user}`)).json();
 		return msgs;
 	}
 
 	async function fetchMsgs() {
-		let msgs: DBMessage[] = await (await fetch("http://127.0.0.1:8080/msgs")).json();
+		let msgs: DBPost[] = await (await fetch("http://127.0.0.1:8080/msgs")).json();
 		return msgs;
 	}
 	const msg_query = createQuery(() => ["msgs"], fetchMsgs);
@@ -154,18 +151,18 @@ export default function Messages(props: { user: string }) {
 }
 
 type MsgProps = {
-	msg: DBMessage;
-	usr: string;
-	setReplying: Setter<DBMessage | null>;
+	msg: DBPost;
+	user: string;
+	setReplying: Setter<DBPost | null>;
 	setShowReplies: Setter<boolean>;
 };
 
 export const Msg = (props: MsgProps) => {
-	const [like, setLike] = createSignal(false);
+	// const [like, setLike] = createSignal(false);
 	const qc = useQueryClient();
 	const delete_msg = createMutation(
 		async () => {
-			let json: DeleteMessage = { id: props.msg.id };
+			let json = { id: props.msg.id };
 			await fetch("http://127.0.0.1:8080/delete_msg", {
 				method: "POST",
 				headers: {
@@ -184,7 +181,7 @@ export const Msg = (props: MsgProps) => {
 
 	const like_msg = createMutation(
 		async () => {
-			let json: LikeMessage = { id: props.msg.id, like: like() };
+			let json: LikePost = { id: props.msg.id, user: props.user };
 			await fetch("http://127.0.0.1:8080/like_msg", {
 				method: "POST",
 				headers: {
@@ -212,10 +209,10 @@ export const Msg = (props: MsgProps) => {
 			}}
 		>
 			<div class="flex gap-2 items-center">
-				<div class="font-bold">{props.msg.usr}</div>
+				{/*<div class="font-bold">{props.msg}</div>*/}
 				<div class="text-gray-600 text-sm">{utc.toLocaleString()}</div>
 			</div>
-			<div>{props.msg.content}</div>
+			<div>{props.msg.msg}</div>
 			<div class="flex gap-4 items-center">
 				<button
 					class="text-gray-600 hover:text-sky-700"
@@ -237,14 +234,14 @@ export const Msg = (props: MsgProps) => {
 						{props.msg.likes.toString()}
 					</div>
 				</button>
-				<Show when={props.usr === props.msg.usr}>
+				{/*<Show when={props.usr === props.msg.usr}>
 					<button
 						class="text-gray-600 hover:text-red-700"
 						onclick={() => delete_msg.mutate()}
 					>
 						<DeleteButton />
 					</button>
-				</Show>
+				</Show>*/}
 			</div>
 		</div>
 	);

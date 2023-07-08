@@ -1,7 +1,7 @@
 import { Match, Switch, createSignal } from "solid-js";
 import { SendButton } from "./assets/svgs";
 import { createMutation, useQueryClient } from "@tanstack/solid-query";
-import { UserMessage } from "../../bindings/UserMessage";
+import { UserPost } from "../../bindings/UserPost";
 
 const [msg, setMsg] = createSignal("");
 
@@ -9,7 +9,7 @@ export default function CreateMsg(props: { user: string }) {
 	const qc = useQueryClient();
 	const msg_mutation = createMutation(
 		async () => {
-			let json: UserMessage = { usr: props.user, content: msg() };
+			let json: UserPost = { user: props.user, msg: msg(), likes: 0 };
 			await fetch("http://127.0.0.1:8080/create_msg", {
 				method: "POST",
 				headers: {

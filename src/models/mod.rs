@@ -1,7 +1,5 @@
-pub mod frontend;
-pub mod message;
-pub mod person;
+pub mod post;
+pub mod user;
 
-pub use frontend::*;
-pub use message::*;
-pub use person::*;
+pub use post::*;
+pub use user::*;

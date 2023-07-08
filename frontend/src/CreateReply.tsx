@@ -1,29 +1,27 @@
 import { Match, Setter, Switch, createSignal } from "solid-js";
 import { SendButton } from "./assets/svgs";
 import { createMutation, useQueryClient } from "@tanstack/solid-query";
-import { ReplyMessage } from "../../bindings/ReplyMessage";
-import { DBMessage } from "../../bindings/DBMessage";
+import { type UserReply } from "../../bindings/UserReply";
+import { type DBPost } from "../../bindings/DBPost";
 
 const [msg, setMsg] = createSignal("");
 
 type ReplyProps = {
 	user: string;
-	msg: DBMessage;
-	setReplying: Setter<DBMessage | null>;
+	msg: DBPost;
+	setReplying: Setter<DBPost | null>;
 };
 
 export default function CreateReply(props: ReplyProps) {
 	const qc = useQueryClient();
 
 	const reply_msg = createMutation(
-		async (parentPath: string) => {
-			console.log("id: ", props.msg.id);
-			console.log("path: ", parentPath);
-			let json: ReplyMessage = {
-				id: props.msg.id,
-				usr: props.user,
-				content: msg(),
-				path: parentPath === null ? `${props.msg.id}` : `${parentPath}/${props.msg.id}`,
+		async () => {
+			let json: UserReply = {
+				postid: props.msg.id,
+				user: props.user,
+				msg: msg(),
+				likes: props.msg.likes,
 			};
 			await fetch("http://127.0.0.1:8080/reply_msg", {
 				method: "POST",
@@ -63,7 +61,7 @@ export default function CreateReply(props: ReplyProps) {
 			<button
 				class="bg-sky-400 rounded-full p-2 disabled:bg-black disabled:text-gray-600 duration-300 transition-colors"
 				disabled={msg().length === 0}
-				onclick={() => reply_msg.mutate(props.msg.path)}
+				onclick={() => reply_msg.mutate()}
 			>
 				<SendButton />
 			</button>

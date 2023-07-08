@@ -1,11 +1,9 @@
 import { Match, Setter, Show, Switch, createSignal } from "solid-js";
 import { createMutation, useQueryClient } from "@tanstack/solid-query";
-import { Person } from "../../bindings/Person";
-import { CheckUser } from "../../bindings/CheckUser";
-import { IncomingUser } from "../../bindings/IncomingUser";
+import { type User } from "../../bindings/User";
 
 type UserProps = {
-	setUser: Setter<Person>;
+	setUser: Setter<User>;
 };
 
 const [showCreate, setShowCreate] = createSignal(false);
@@ -17,7 +15,7 @@ export default function Login(props: UserProps) {
 	const qc = useQueryClient();
 	const user_mutation = createMutation(
 		async () => {
-			let json: CheckUser = { name: name(), password: password() };
+			let json: User = { name: name(), password: password(), bio: bio() };
 			let res = await fetch("http://127.0.0.1:8080/user_exists", {
 				method: "POST",
 				headers: {
@@ -83,7 +81,7 @@ function CreateUser(props: UserProps) {
 	const qc = useQueryClient();
 	const user_mutation = createMutation(
 		async () => {
-			let json: IncomingUser = { name: name(), password: password(), bio: bio() };
+			let json: User = { name: name(), password: password(), bio: bio() };
 			let res = await fetch("http://127.0.0.1:8080/create_user", {
 				method: "POST",
 				headers: {

@@ -1,18 +1,19 @@
 import { createQuery } from "@tanstack/solid-query";
-import { DBMessage } from "../../bindings/DBMessage";
+import { DBPost } from "../../bindings/DBPost";
 import { For, Match, Setter, Show, Switch, createSignal } from "solid-js";
 import { Msg } from "./Messages";
 import CreateReply from "./CreateReply";
 
 export default function Replies(props: {
 	user: string;
-	msg: DBMessage;
+	msg: DBPost;
 	setShowReplies: Setter<boolean>;
 }) {
-	const [replying, setReplying] = createSignal<DBMessage>();
+	const [replying, setReplying] = createSignal<DBPost>();
 	async function fetchReplies() {
-		let id = props.msg.path ?? props.msg.id;
-		let msgs: DBMessage[] = await (await fetch(`http://127.0.0.1:8080/msg/${id}`)).json();
+		let msgs: DBPost[] = await (
+			await fetch(`http://127.0.0.1:8080/msg/${props.msg.id}`)
+		).json();
 		return msgs;
 	}
 
@@ -33,7 +34,7 @@ export default function Replies(props: {
 							{msg => (
 								<Msg
 									msg={msg}
-									usr={props.user}
+									user={props.user}
 									setReplying={setReplying}
 									setShowReplies={props.setShowReplies}
 								/>

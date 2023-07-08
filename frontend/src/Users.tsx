@@ -1,10 +1,10 @@
 import { createQuery } from "@tanstack/solid-query";
 import { Switch, Match, For } from "solid-js";
-import { Person } from "../../bindings/Person";
+import { User } from "../../bindings/User";
 
 export default function Users() {
 	async function fetchUsers() {
-		let users: Person[] = await (await fetch("http://127.0.0.1:8080/users")).json();
+		let users: User[] = await (await fetch("http://127.0.0.1:8080/users")).json();
 		return users;
 	}
 	const user_query = createQuery(() => ["users"], fetchUsers);
@@ -27,7 +27,7 @@ export default function Users() {
 	);
 }
 
-const Profile = (props: Person) => {
+const Profile = (props: User) => {
 	return (
 		<div class="flex flex-col p-2 hover:bg-gray-600 last:rounded-b-xl">
 			<div class="font-bold">{props.name}</div>
