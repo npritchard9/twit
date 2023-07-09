@@ -8,6 +8,7 @@ import { type LikePost } from "../../../bindings/LikePost";
 import { SendButton, DeleteButton, HeartButton, ReplyButton } from "../assets/svgs";
 import { UserPost } from "../../../bindings/UserPost";
 import { User } from "../../../bindings/User";
+import { A } from "solid-start";
 // import CreateReply from "./CreateReply";
 // import Replies from "./Replies";
 
@@ -51,8 +52,6 @@ const [currMsg, setCurrMsg] = createSignal<DBPost | null>();
 function Messages() {
 	const { user } = useUserContext()!;
 	const [view, setView] = createSignal<View>("All");
-	const [replying, setReplying] = createSignal<DBPost | null>();
-	const [showReplies, setShowReplies] = createSignal(false);
 
 	async function fetchMe() {
 		let msgs: UserAndPost[] = await (
@@ -73,11 +72,7 @@ function Messages() {
 	});
 
 	return (
-		<div
-			class={`flex flex-col items-center justify-center mt-2 px-4 w-full ${
-				replying ?? "bg-gray-500"
-			}`}
-		>
+		<div class="flex flex-col items-center justify-center mt-2 px-4 w-full">
 			<div class="flex justify-center gap-4 w-full items-center pb-2 border-b border-b-gray-800">
 				<button
 					class={`${
@@ -113,14 +108,7 @@ function Messages() {
 							</Match>
 							<Match when={me_query.isSuccess}>
 								<For each={me_query.data}>
-									{msg => (
-										<Msg
-											msg={msg.post}
-											user={msg.user.name}
-											setReplying={setReplying}
-											setShowReplies={setShowReplies}
-										/>
-									)}
+									{msg => <Msg msg={msg.post} user={msg.user.name} />}
 								</For>
 								{/*<Switch>
 									<Match when={replying()}>
@@ -128,7 +116,6 @@ function Messages() {
 											<CreateReply
 												user={user()}
 												msg={replying()}
-												setReplying={setReplying}
 											/>
 										</div>
 									</Match>
@@ -137,7 +124,6 @@ function Messages() {
 											<Replies
 												user={props.user}
 												msg={currMsg}
-												setShowReplies={setShowReplies}
 											/>
 										</div>
 									</Match>
@@ -155,14 +141,7 @@ function Messages() {
 						</Match>
 						<Match when={msg_query.isSuccess}>
 							<For each={msg_query.data}>
-								{msg => (
-									<Msg
-										msg={msg.post}
-										user={msg.user.name}
-										setReplying={setReplying}
-										setShowReplies={setShowReplies}
-									/>
-								)}
+								{msg => <Msg msg={msg.post} user={msg.user.name} />}
 							</For>
 							{/*<Switch>
 								<Match when={replying()}>
@@ -195,8 +174,6 @@ function Messages() {
 type MsgProps = {
 	msg: DBPost;
 	user: string;
-	setReplying: Setter<DBPost | null>;
-	setShowReplies: Setter<boolean>;
 };
 
 export const Msg = (props: MsgProps) => {
@@ -241,13 +218,24 @@ export const Msg = (props: MsgProps) => {
 			},
 		};
 	});
+
+	// async function fetchUserLikesMsg() {
+	// 	let likes: boolean = await (
+	// 		await fetch(`http://127.0.0.1:8080/${user()!.name}/likes/${props.msg.id.split(":")[1]}`)
+	// 	).json();
+	// 	console.log(`${user()!.name} likes ${props.msg.id}? ${likes}`);
+	// 	return likes;
+	// }
+	// const likes_query = createQuery(() => {
+	// 	return { queryKey: ["likes_msg"], queryFn: fetchUserLikesMsg };
+	// });
+
 	let utc = new Date(props.msg.ts);
 
 	return (
 		<div
 			class="flex flex-col border-b border-b-gray-800 p-2"
 			onclick={() => {
-				props.setShowReplies(true);
 				setCurrMsg(props.msg);
 			}}
 		>
@@ -257,21 +245,21 @@ export const Msg = (props: MsgProps) => {
 			</div>
 			<div>{props.msg.msg}</div>
 			<div class="flex gap-4 items-center">
-				<button
-					class="text-gray-600 hover:text-sky-700"
-					onclick={() => {
-						props.setReplying(props.msg);
-					}}
-				>
+				<A class="text-gray-600 hover:text-sky-700" href={`/reply/${props.msg.id}`}>
 					<ReplyButton />
-				</button>
+				</A>
 				<button
 					class="text-gray-600 hover:text-pink-400"
 					onclick={() => {
 						like_msg.mutate();
 					}}
 				>
-					<div class="flex gap-2 items-center">
+					<div
+						// class={`flex gap-2 items-center ${
+						// 	likes_query.data === true && "text-pink-400"
+						// }`}
+						class="flex gap-2 items-center"
+					>
 						<HeartButton />
 						{props.msg.likes}
 					</div>

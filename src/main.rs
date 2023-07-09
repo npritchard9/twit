@@ -9,8 +9,8 @@ use env_logger::Env;
 use surrealdb::{engine::local::Db, Surreal};
 use twit::{
     db::{
-        check_user, delete_post, get_all_users, get_db, get_post, get_posts,
-        get_posts_from_user, get_replies_to_post, insert_post, insert_reply, insert_user,
+        check_user, delete_post, get_all_users, get_db, get_posts, get_posts_from_user,
+        get_replies_to_post, get_user_likes_post, insert_post, insert_reply, insert_user,
         like_post,
     },
     models::*,
@@ -151,6 +151,22 @@ async fn get_users(db: Data<Surreal<Db>>) -> impl Responder {
     }
 }
 
+#[get("/{name}/likes/{postid}")]
+async fn get_user_likes_msg(path: Path<(String, String)>, db: Data<Surreal<Db>>) -> impl Responder {
+    let (name, postid) = path.into_inner();
+    log::info!("Request to /{}/likes/{}", name, postid);
+    match get_user_likes_post(name.to_string(), postid.to_string(), &db).await {
+        Ok(likes) => {
+            log::info!("USER LIKES POST: {likes}");
+            HttpResponse::Ok().json(likes)
+        }
+        Err(e) => {
+            log::info!("Failed to execute query: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
@@ -165,6 +181,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_replies)
             .service(get_me)
             .service(get_users)
+            .service(get_user_likes_msg)
             .service(resource("/user_exists").route(post().to(user_exists)))
             .service(resource("/create_user").route(post().to(create_user)))
             .service(resource("/create_msg").route(post().to(create_msg)))

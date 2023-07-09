@@ -140,6 +140,25 @@ pub async fn like_post(post: LikePost, db: &Surreal<Db>) -> anyhow::Result<()> {
     Ok(())
 }
 
+pub async fn get_user_likes_post(
+    user: String,
+    postid: String,
+    db: &Surreal<Db>,
+) -> anyhow::Result<bool> {
+    let mut liked_res = db
+        .query(format!(
+            "select count() from liked where user:{} = in and post:{} = out group all",
+            &user, &postid
+        ))
+        .await?;
+    let user_already_liked: Option<Count> = liked_res.take(0)?;
+    if let Some(Count { count: _ }) = user_already_liked {
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
 pub async fn get_likes(user: String, db: &Surreal<Db>) -> anyhow::Result<Vec<DBPost>> {
     let mut res = db
         .query(format!("select out.* from liked where user:{} = in", user))

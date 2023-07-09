@@ -27,7 +27,6 @@ pub struct DBPost {
 #[ts(export)]
 pub struct UserReply {
     pub msg: String,
-    pub likes: u32,
     pub user: String,
     pub postid: String,
 }
