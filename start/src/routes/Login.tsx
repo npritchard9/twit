@@ -1,24 +1,16 @@
 import { Match, Switch, createSignal } from "solid-js";
 import { createMutation, useQueryClient } from "@tanstack/solid-query";
-import { CheckUser } from "../../../bindings/CheckUser";
 import { A, useNavigate, useRouteData } from "solid-start";
-import { routeData } from ".";
-import { createUserSession } from "~/lib/session";
-
-const [name, setName] = createSignal("");
-const [password, setPassword] = createSignal("");
+import { useUserContext } from "~/state";
 
 export default function Login() {
-	const user = useRouteData<typeof routeData>();
-	console.log("user in login", user);
-	if (user()) {
-		let nav = useNavigate();
-		nav("/");
-	}
+	const { user, setUser } = useUserContext()!;
+	const [name, setName] = createSignal("");
+	const [password, setPassword] = createSignal("");
 	const qc = useQueryClient();
 	const user_exists = createMutation(() => ({
 		mutationFn: async () => {
-			let json: CheckUser = { name: name(), password: password() };
+			let json = { name: name(), password: password(), bio: "" };
 			let res = await fetch("http://127.0.0.1:8080/user_exists", {
 				method: "POST",
 				headers: {
@@ -32,10 +24,10 @@ export default function Login() {
 			}
 		},
 		onSuccess: data => {
+			setUser({ name: name(), password: password(), bio: data.bio });
 			setName("");
 			setPassword("");
 			qc.invalidateQueries({ queryKey: ["users"] });
-			createUserSession(data.name, data.password, "/");
 		},
 	}));
 

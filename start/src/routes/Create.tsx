@@ -1,21 +1,18 @@
 import { createMutation, useQueryClient } from "@tanstack/solid-query";
-import { createSignal, Match, Setter, Switch } from "solid-js";
+import { createSignal, Match, Switch } from "solid-js";
+import { type User } from "../../../bindings/User";
 import { A } from "solid-start";
-import { IncomingUser } from "../../../bindings/IncomingUser";
-import { Person } from "../../../bindings/Person";
+import { useUserContext } from "~/state";
 
-type UserProps = {
-	setUser: Setter<Person>;
-};
-
-export default function CreateUser(props: UserProps) {
+export default function CreateUser() {
+	const { setUser } = useUserContext()!;
 	const [name, setName] = createSignal("");
 	const [bio, setBio] = createSignal("");
 	const [password, setPassword] = createSignal("");
 	const qc = useQueryClient();
 	const user = createMutation(() => ({
 		mutationFn: async () => {
-			let json: IncomingUser = { name: name(), password: password(), bio: bio() };
+			let json = { name: name(), password: password(), bio: bio() };
 			let res = await fetch("http://127.0.0.1:8080/create_user", {
 				method: "POST",
 				headers: {
@@ -23,14 +20,13 @@ export default function CreateUser(props: UserProps) {
 				},
 				body: JSON.stringify(json),
 			});
-			let user: Person = await res.json();
+			let user: User = await res.json();
 			if (res.status === 200) {
-				sessionStorage.setItem("user", JSON.stringify(user));
-				props.setUser(user);
+				return user;
 			}
-			return user;
 		},
 		onSuccess: () => {
+			setUser({ name: name(), password: password(), bio: bio() });
 			setName("");
 			setPassword("");
 			setBio("");
