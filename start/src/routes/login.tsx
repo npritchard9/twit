@@ -1,17 +1,16 @@
 import { Match, Switch, createSignal } from "solid-js";
 import { createMutation, useQueryClient } from "@tanstack/solid-query";
-import { A, useNavigate, useRouteData } from "solid-start";
-import { useUserContext } from "~/state";
+import { A } from "solid-start";
+import { LoginUser } from "../../../bindings/LoginUser";
 
 export default function Login() {
-	const { user, setUser } = useUserContext()!;
 	const [name, setName] = createSignal("");
 	const [password, setPassword] = createSignal("");
 	const qc = useQueryClient();
 	const user_exists = createMutation(() => ({
 		mutationFn: async () => {
-			let json = { name: name(), password: password(), bio: "" };
-			let res = await fetch("http://127.0.0.1:8080/user_exists", {
+			let json: LoginUser = { name: name(), password: password() };
+			let res = await fetch("http://127.0.0.1:8080/login", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -23,8 +22,7 @@ export default function Login() {
 				return user;
 			}
 		},
-		onSuccess: data => {
-			setUser({ name: name(), password: password(), bio: data.bio });
+		onSuccess: () => {
 			setName("");
 			setPassword("");
 			qc.invalidateQueries({ queryKey: ["users"] });
@@ -34,6 +32,7 @@ export default function Login() {
 	const login_user = () => {
 		user_exists.mutate();
 	};
+
 	return (
 		<div class="flex flex-col items-center justify-center h-screen gap-4">
 			<Switch>

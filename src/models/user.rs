@@ -3,6 +3,19 @@ use ts_rs::TS;
 
 #[derive(Serialize, Deserialize, Debug, TS)]
 #[ts(export)]
+pub struct CheckUser {
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, TS)]
+#[ts(export)]
+pub struct LoginUser {
+    pub name: String,
+    pub password: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, TS)]
+#[ts(export)]
 pub struct User {
     pub name: String,
     pub password: String,

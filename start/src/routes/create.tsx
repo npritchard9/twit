@@ -2,10 +2,8 @@ import { createMutation, useQueryClient } from "@tanstack/solid-query";
 import { createSignal, Match, Switch } from "solid-js";
 import { type User } from "../../../bindings/User";
 import { A } from "solid-start";
-import { useUserContext } from "~/state";
 
 export default function CreateUser() {
-	const { setUser } = useUserContext()!;
 	const [name, setName] = createSignal("");
 	const [bio, setBio] = createSignal("");
 	const [password, setPassword] = createSignal("");
@@ -26,7 +24,6 @@ export default function CreateUser() {
 			}
 		},
 		onSuccess: () => {
-			setUser({ name: name(), password: password(), bio: bio() });
 			setName("");
 			setPassword("");
 			setBio("");

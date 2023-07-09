@@ -11,15 +11,27 @@ use twit::{
     db::{
         check_user, delete_post, get_all_users, get_db, get_posts, get_posts_from_user,
         get_replies_to_post, get_user_likes_post, insert_post, insert_reply, insert_user,
-        like_post,
+        like_post, login_user,
     },
     models::*,
 };
 
-async fn user_exists(user: Json<User>, db: Data<Surreal<Db>>) -> impl Responder {
+async fn user_exists(user: Json<CheckUser>, db: Data<Surreal<Db>>) -> impl Responder {
     log::info!("Received {:?}", user);
 
     match check_user(user.0, &db).await {
+        Ok(u) => HttpResponse::Ok().json(u),
+        Err(e) => {
+            println!("Failed to execute query: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+async fn login(user: Json<LoginUser>, db: Data<Surreal<Db>>) -> impl Responder {
+    log::info!("Received {:?}", user);
+
+    match login_user(user.0, &db).await {
         Ok(u) => HttpResponse::Ok().json(u),
         Err(e) => {
             println!("Failed to execute query: {}", e);
@@ -183,6 +195,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_users)
             .service(get_user_likes_msg)
             .service(resource("/user_exists").route(post().to(user_exists)))
+            .service(resource("/login").route(post().to(login)))
             .service(resource("/create_user").route(post().to(create_user)))
             .service(resource("/create_msg").route(post().to(create_msg)))
             .service(resource("/delete_msg").route(post().to(delete_msg)))
