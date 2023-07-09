@@ -200,6 +200,7 @@ type MsgProps = {
 };
 
 export const Msg = (props: MsgProps) => {
+	const { user } = useUserContext()!;
 	const qc = useQueryClient();
 	const delete_msg = createMutation(() => {
 		return {
@@ -223,7 +224,7 @@ export const Msg = (props: MsgProps) => {
 	const like_msg = createMutation(() => {
 		return {
 			mutationFn: async () => {
-				let json: LikePost = { id: props.msg.id, user: props.user };
+				let json: LikePost = { id: props.msg.id, user: user()!.name };
 				console.log(json);
 				await fetch("http://127.0.0.1:8080/like_msg", {
 					method: "POST",
@@ -272,7 +273,7 @@ export const Msg = (props: MsgProps) => {
 				>
 					<div class="flex gap-2 items-center">
 						<HeartButton />
-						{props.msg.likes.toString()}
+						{props.msg.likes}
 					</div>
 				</button>
 				<Show when={props.user === props.user}>

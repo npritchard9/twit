@@ -112,14 +112,13 @@ pub async fn delete_post(post: LikePost, db: &Surreal<Db>) -> anyhow::Result<()>
 pub async fn like_post(post: LikePost, db: &Surreal<Db>) -> anyhow::Result<()> {
     let mut liked_res = db
         .query(format!(
-            "select value count() from liked where (user:{} = in and {} = out) limit 1",
+            "select count() from liked where user:{} = in and {} = out group all",
             &post.user, &post.id
         ))
         .await?;
-    println!("LIKED RES: {:#?}", liked_res);
-    let user_already_liked: Option<i32> = liked_res.take(0)?;
-    println!("USER ALREADY LIKED? {user_already_liked:?}");
-    if let Some(_) = user_already_liked {
+    let user_already_liked: Option<Count> = liked_res.take(0)?;
+    if let Some(Count { count: c }) = user_already_liked {
+        println!("LIKE COUNT: {c}");
         let _remove_like = db
             .query(format!("update {} set likes -= 1", &post.id))
             .await?;
@@ -130,6 +129,7 @@ pub async fn like_post(post: LikePost, db: &Surreal<Db>) -> anyhow::Result<()> {
             ))
             .await?;
     } else {
+        println!("USER HASN'T LIKED: {user_already_liked:#?}");
         let _add_like = db
             .query(format!("update {} set likes += 1", &post.id))
             .await?;

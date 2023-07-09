@@ -9,7 +9,7 @@ use env_logger::Env;
 use surrealdb::{engine::local::Db, Surreal};
 use twit::{
     db::{
-        check_user, clear_db, delete_post, get_all_users, get_db, get_post, get_posts,
+        check_user, delete_post, get_all_users, get_db, get_post, get_posts,
         get_posts_from_user, get_replies_to_post, insert_post, insert_reply, insert_user,
         like_post,
     },
