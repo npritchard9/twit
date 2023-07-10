@@ -13,3 +13,4 @@ log = "0.4.19"
 ts-rs = { version = "6.2.1", features = ["chrono", "chrono-impl"] }
 serde = { version = "1.0.167", features = ["derive"] }
 surrealdb = { version = "1.0.0-beta.9", features = ["kv-rocksdb"] }
+actix-session = { version = "0.7.2", features = ["cookie-session"] }

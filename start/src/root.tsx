@@ -14,7 +14,6 @@ import {
 	Title,
 } from "solid-start";
 import "./root.css";
-import { UserProvider } from "./state";
 
 export default function Root() {
 	const qc = new QueryClient();
@@ -27,15 +26,13 @@ export default function Root() {
 			</Head>
 			<Body>
 				<QueryClientProvider client={qc}>
-					<UserProvider>
-						<Suspense>
-							<ErrorBoundary>
-								<Routes>
-									<FileRoutes />
-								</Routes>
-							</ErrorBoundary>
-						</Suspense>
-					</UserProvider>
+					<Suspense>
+						<ErrorBoundary>
+							<Routes>
+								<FileRoutes />
+							</Routes>
+						</ErrorBoundary>
+					</Suspense>
 				</QueryClientProvider>
 				<Scripts />
 			</Body>

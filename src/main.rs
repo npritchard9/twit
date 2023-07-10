@@ -1,20 +1,17 @@
 use actix_cors::Cors;
+use actix_session::{
+    config::PersistentSession, storage::CookieSessionStore, Session, SessionMiddleware,
+};
 use actix_web::{
+    cookie::{self, Key},
     get,
     middleware::Logger,
     web::{self, post, resource, Data, Json, Path},
-    App, HttpResponse, HttpServer, Responder,
+    App, HttpRequest, HttpResponse, HttpServer, Responder,
 };
 use env_logger::Env;
 use surrealdb::{engine::local::Db, Surreal};
-use twit::{
-    db::{
-        check_user, delete_post, get_all_users, get_db, get_posts, get_posts_from_user,
-        get_replies_to_post, get_user_likes_post, insert_post, insert_reply, insert_user,
-        like_post, login_user,
-    },
-    models::*,
-};
+use twit::{db::*, models::*};
 
 async fn user_exists(user: Json<CheckUser>, db: Data<Surreal<Db>>) -> impl Responder {
     log::info!("Received {:?}", user);
@@ -28,11 +25,22 @@ async fn user_exists(user: Json<CheckUser>, db: Data<Surreal<Db>>) -> impl Respo
     }
 }
 
-async fn login(user: Json<LoginUser>, db: Data<Surreal<Db>>) -> impl Responder {
+async fn login(
+    user: Json<LoginUser>,
+    db: Data<Surreal<Db>>,
+    session: Session,
+    req: HttpRequest,
+) -> impl Responder {
     log::info!("Received {:?}", user);
 
     match login_user(user.0, &db).await {
-        Ok(u) => HttpResponse::Ok().json(u),
+        Ok(u) => {
+            let check_user = CheckUser {
+                name: u.name.clone(),
+            };
+            create_session(session, req, db, check_user).await.unwrap();
+            HttpResponse::Ok().json(u)
+        }
         Err(e) => {
             println!("Failed to execute query: {}", e);
             HttpResponse::InternalServerError().finish()
@@ -179,6 +187,25 @@ async fn get_user_likes_msg(path: Path<(String, String)>, db: Data<Surreal<Db>>)
     }
 }
 
+async fn create_session(
+    session: Session,
+    req: HttpRequest,
+    db: Data<Surreal<Db>>,
+    user: CheckUser,
+) -> anyhow::Result<()> {
+    log::info!("{req:?}");
+    log::info!("{:?}", session.entries());
+
+    if let Some(existing_user) = session.get::<User>("user")? {
+        log::info!("SESSION VALUE: {existing_user:#?}");
+    } else {
+        log::info!("SESSION NOT FOUND");
+        let u = check_user(user, &db).await?;
+        session.insert("user", u)?;
+    }
+    Ok(())
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
@@ -189,6 +216,14 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(db.clone()))
             .wrap(Logger::default())
             .wrap(cors)
+            .wrap(
+                SessionMiddleware::builder(CookieSessionStore::default(), Key::from(&[0; 64]))
+                    .cookie_secure(false)
+                    .session_lifecycle(
+                        PersistentSession::default().session_ttl(cookie::time::Duration::hours(2)),
+                    )
+                    .build(),
+            )
             .service(get_msgs)
             .service(get_replies)
             .service(get_me)

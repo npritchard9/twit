@@ -21,14 +21,13 @@ pub async fn check_user(user: CheckUser, db: &Surreal<Db>) -> anyhow::Result<Use
 }
 
 pub async fn login_user(user: LoginUser, db: &Surreal<Db>) -> anyhow::Result<User> {
-    let q = format!(
-        "select * from user where name = '{}' and password = '{}'",
-        user.name, user.password
-    );
-    println!("TRYING TO LOG IN WITH QUERY: {q}");
-    let mut res = db.query(q).await?;
+    let mut res = db
+        .query(format!(
+            "select * from user where name = '{}' and password = '{}'",
+            user.name, user.password
+        ))
+        .await?;
     let u: Option<User> = res.take(0)?;
-    println!("TRYING TO LOG IN, FOUND USER: {u:?}");
     if let Some(p) = u {
         Ok(p)
     } else {
