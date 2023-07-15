@@ -20,21 +20,6 @@ pub async fn check_user(user: CheckUser, db: &Surreal<Db>) -> anyhow::Result<Use
     Ok(u)
 }
 
-pub async fn login_user(user: LoginUser, db: &Surreal<Db>) -> anyhow::Result<User> {
-    let mut res = db
-        .query(format!(
-            "select * from user where name = '{}' and password = '{}'",
-            user.name, user.password
-        ))
-        .await?;
-    let u: Option<User> = res.take(0)?;
-    if let Some(p) = u {
-        Ok(p)
-    } else {
-        Err(anyhow!("Incorrect username or password"))
-    }
-}
-
 pub async fn insert_user(user: User, db: &Surreal<Db>) -> anyhow::Result<User> {
     let u = db.create(("user", user.name.clone())).content(user).await?;
     Ok(u)

@@ -9,25 +9,13 @@ pub struct CheckUser {
 
 #[derive(Serialize, Deserialize, Debug, TS)]
 #[ts(export)]
-pub struct LoginUser {
-    pub name: String,
-    pub password: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, TS)]
-#[ts(export)]
 pub struct User {
     pub name: String,
-    pub password: String,
     pub bio: String,
 }
 
 impl User {
-    pub fn new(name: String, password: String, bio: String) -> Self {
-        User {
-            name,
-            password,
-            bio,
-        }
+    pub fn new(name: String, bio: String) -> Self {
+        User { name, bio }
     }
 }

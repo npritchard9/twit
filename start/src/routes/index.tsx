@@ -1,5 +1,4 @@
 import Messages from "../components/Messages";
-import CreateMsg from "../components/CreateMsg";
 import Users from "../components/Users";
 import UserInfo from "../components/UserInfo";
 
@@ -9,9 +8,6 @@ export default function Home() {
 			<div class="grid grid-cols-4 border-b border-b-gray-600">
 				<div class="col-span-1">
 					<UserInfo />
-				</div>
-				<div class="col-span-3">
-					<CreateMsg />
 				</div>
 			</div>
 			<div class="flex">
