@@ -8,7 +8,7 @@ use actix_web::{
 };
 use dotenvy::dotenv;
 use env_logger::Env;
-use oauth2::{basic::BasicClient, reqwest::async_http_client};
+use oauth2::{basic::BasicClient, reqwest::async_http_client, TokenResponse};
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, Scope, TokenUrl,
 };
@@ -172,8 +172,8 @@ async fn login(data: Data<AppState>) -> impl Responder {
     let (authorize_url, _csrf_state) = data
         .oauth
         .authorize_url(CsrfToken::new_random)
-        .add_scope(Scope::new("read:user".to_string()))
-        .add_scope(Scope::new("user:email".to_string()))
+        .add_scope(Scope::new("user".to_string()))
+        // .add_scope(Scope::new("user:email".to_string()))
         .url();
     HttpResponse::Found()
         .insert_header((header::LOCATION, authorize_url.to_string()))
@@ -190,14 +190,38 @@ async fn auth_github(data: Data<AppState>, params: Query<AuthRequest>) -> impl R
         .request_async(async_http_client)
         .await;
     match token_res {
-        Ok(token) => HttpResponse::PermanentRedirect()
-            .insert_header((header::LOCATION, "http://localhost:3000/"))
-            .json(token),
+        Ok(token) => {
+            let name = get_user_from_github(format!("{:?}", token.access_token().secret()))
+                .await
+                .expect("To be able to get the current github user");
+            HttpResponse::Found()
+                .insert_header((
+                    header::LOCATION,
+                    format!("http://localhost:3000/users/{name}"),
+                ))
+                .finish()
+        }
         Err(e) => {
             log::info!("Failed to execute query: {}", e);
             HttpResponse::InternalServerError().finish()
         }
     }
+}
+
+async fn get_user_from_github(token: String) -> anyhow::Result<String> {
+    let client = reqwest::Client::new();
+    let res = client
+        .get("https://api.github.com/user")
+        .bearer_auth(token)
+        .header(header::ACCEPT, "application/vnd.github+json")
+        .header(header::USER_AGENT, "npritchard9")
+        .header("X-GitHub-Api-Version", "2022-11-28")
+        .send()
+        .await?
+        .json::<GithubUser>()
+        .await?;
+    log::info!("res: {res:?}");
+    Ok(res.name)
 }
 
 #[actix_web::main]
@@ -237,7 +261,6 @@ async fn main() -> std::io::Result<()> {
                 oauth: client,
                 db: db.clone(),
             }))
-            // .app_data(web::Data::new(db.clone()))
             .wrap(Logger::default())
             .wrap(cors)
             .service(login)
