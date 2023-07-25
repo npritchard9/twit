@@ -28,18 +28,6 @@ struct AuthRequest {
     state: String,
 }
 
-async fn user_exists(user: Json<CheckUser>, data: Data<AppState>) -> impl Responder {
-    log::info!("Received {:?}", user);
-
-    match check_user(user.0, &data.db).await {
-        Ok(u) => HttpResponse::Ok().json(u),
-        Err(e) => {
-            println!("Failed to execute query: {}", e);
-            HttpResponse::InternalServerError().finish()
-        }
-    }
-}
-
 async fn create_msg(msg: Json<UserPost>, data: Data<AppState>) -> impl Responder {
     log::info!("Received {:?}", msg);
 
@@ -172,9 +160,10 @@ async fn login(data: Data<AppState>) -> impl Responder {
     let (authorize_url, _csrf_state) = data
         .oauth
         .authorize_url(CsrfToken::new_random)
-        .add_scope(Scope::new(
-            "https://www.googleapis.com/auth/userinfo.profile".to_string(),
-        ))
+        // .add_scope(Scope::new(
+        //     "https://www.googleapis.com/auth/userinfo.profile".to_string(),
+        // ))
+        .add_scope(Scope::new("openid email profile".into()))
         .url();
     HttpResponse::Found()
         .insert_header((header::LOCATION, authorize_url.to_string()))
@@ -195,12 +184,34 @@ async fn auth_google(data: Data<AppState>, params: Query<AuthRequest>) -> impl R
             let name = get_user_from_google(format!("{:?}", token.access_token().secret()))
                 .await
                 .expect("To be able to get the current google user");
-            HttpResponse::Found()
-                .insert_header((
-                    header::LOCATION,
-                    format!("http://localhost:3000/users/{name}"),
-                ))
-                .finish()
+
+            match check_user(&name, &data.db).await {
+                Ok(_) => HttpResponse::Found()
+                    .insert_header((
+                        header::LOCATION,
+                        format!("http://localhost:3000/users/{name}"),
+                    ))
+                    .finish(),
+                Err(_check_error) => {
+                    let user = User {
+                        name: name.clone(),
+                        bio: String::from(""),
+                    };
+                    match insert_user(user, &data.db).await {
+                        Ok(_) => HttpResponse::Found()
+                            .insert_header((
+                                header::LOCATION,
+                                format!("http://localhost:3000/users/{name}"),
+                            ))
+                            .finish(),
+
+                        Err(insert_error) => {
+                            log::info!("Failed to execute query: {}", insert_error);
+                            HttpResponse::InternalServerError().finish()
+                        }
+                    }
+                }
+            }
         }
         Err(e) => {
             log::info!("Failed to execute query: {}", e);
@@ -212,15 +223,13 @@ async fn auth_google(data: Data<AppState>, params: Query<AuthRequest>) -> impl R
 async fn get_user_from_google(token: String) -> anyhow::Result<String> {
     let client = reqwest::Client::new();
     let res = client
-        .get("https://www.googleapis.com/oauth2/v3/userinfo")
+        .get("https://openidconnect.googleapis.com/v1/userinfo")
         .bearer_auth(token)
         .send()
         .await?
         .json::<GoogleUser>()
-        // .text()
         .await?;
-    log::info!("res: {res:?}");
-    Ok(res.name)
+    Ok(res.email.split_once("@").unwrap().0.into())
 }
 
 #[actix_web::main]
@@ -269,7 +278,6 @@ async fn main() -> std::io::Result<()> {
             .service(get_me)
             .service(get_users)
             .service(get_user_likes_msg)
-            .service(resource("/user_exists").route(post().to(user_exists)))
             .service(resource("/create_msg").route(post().to(create_msg)))
             .service(resource("/delete_msg").route(post().to(delete_msg)))
             .service(resource("/like_msg").route(post().to(like_msg)))

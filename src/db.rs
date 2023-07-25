@@ -15,8 +15,8 @@ pub async fn get_all_users(db: &Surreal<Db>) -> anyhow::Result<Vec<User>> {
     Ok(users)
 }
 
-pub async fn check_user(user: CheckUser, db: &Surreal<Db>) -> anyhow::Result<User> {
-    let u = db.select(("user", user.name)).await?;
+pub async fn check_user(user: &str, db: &Surreal<Db>) -> anyhow::Result<User> {
+    let u = db.select(("user", user)).await?;
     Ok(u)
 }
 
@@ -35,7 +35,6 @@ pub async fn insert_post(post: UserPost, db: &Surreal<Db>) -> anyhow::Result<DBP
     let p: Option<DBPost> = res.take(0)?;
     match p {
         Some(m) => {
-            println!("CREATED POST: {m:?}");
             let _relate = db
                 .query(format!("relate user:{}->wrote->{}", post.user, m.id))
                 .await?;
@@ -66,7 +65,7 @@ pub async fn get_posts_from_user(
     let mut res = db
         .query(format!(
             "select in.* as user, out.* as post from wrote where in = user:{}",
-            user.split_once(" ").unwrap().0
+            user
         ))
         .await?;
     let posts = res.take(0)?;

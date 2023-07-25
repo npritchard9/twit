@@ -7,5 +7,7 @@ pub struct GoogleUser {
     pub given_name: String,
     pub family_name: String,
     pub picture: String,
+    pub email: String,
+    pub email_verified: bool,
     pub locale: String,
 }
