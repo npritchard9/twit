@@ -66,7 +66,7 @@ pub async fn get_posts_from_user(
     let mut res = db
         .query(format!(
             "select in.* as user, out.* as post from wrote where in = user:{}",
-            user
+            user.split_once(" ").unwrap().0
         ))
         .await?;
     let posts = res.take(0)?;

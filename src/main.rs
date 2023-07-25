@@ -10,7 +10,7 @@ use dotenvy::dotenv;
 use env_logger::Env;
 use oauth2::{
     basic::BasicClient, reqwest::async_http_client, AuthUrl, AuthorizationCode, ClientId,
-    ClientSecret, CsrfToken, RedirectUrl, Scope, TokenUrl,
+    ClientSecret, CsrfToken, RedirectUrl, Scope, TokenResponse, TokenUrl,
 };
 use serde::Deserialize;
 use std::env;
@@ -191,14 +191,14 @@ async fn auth_google(data: Data<AppState>, params: Query<AuthRequest>) -> impl R
         .request_async(async_http_client)
         .await;
     match token_res {
-        Ok(_token) => {
-            // let name = get_user_from_google(format!("{:?}", token.access_token().secret()))
-            //     .await
-            //     .expect("To be able to get the current google user");
+        Ok(token) => {
+            let name = get_user_from_google(format!("{:?}", token.access_token().secret()))
+                .await
+                .expect("To be able to get the current google user");
             HttpResponse::Found()
                 .insert_header((
                     header::LOCATION,
-                    format!("http://localhost:3000/users/Noah"),
+                    format!("http://localhost:3000/users/{name}"),
                 ))
                 .finish()
         }
@@ -209,18 +209,19 @@ async fn auth_google(data: Data<AppState>, params: Query<AuthRequest>) -> impl R
     }
 }
 
-// async fn get_user_from_google(token: String) -> anyhow::Result<String> {
-//     let client = reqwest::Client::new();
-//     let res = client
-//         .get("https://www.googleapis.com/oauth2/v3/userinfo")
-//         .bearer_auth(token)
-//         .send()
-//         .await?
-//         .json::<GoogleUser>()
-//         .await?;
-//     log::info!("res: {res:?}");
-//     Ok(res.name)
-// }
+async fn get_user_from_google(token: String) -> anyhow::Result<String> {
+    let client = reqwest::Client::new();
+    let res = client
+        .get("https://www.googleapis.com/oauth2/v3/userinfo")
+        .bearer_auth(token)
+        .send()
+        .await?
+        .json::<GoogleUser>()
+        // .text()
+        .await?;
+    log::info!("res: {res:?}");
+    Ok(res.name)
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

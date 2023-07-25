@@ -1,40 +1,14 @@
-import { Show, type Component, createSignal } from "solid-js";
-import Messages from "./Messages";
-import Users from "./Users";
-import CreateMsg from "./CreateMsg";
-import { UserInfo } from "./User";
+import { type Component } from "solid-js";
 import Login from "./Login";
-import { type User } from "../../bindings/User";
-
-const [user, setUser] = createSignal<User>(JSON.parse(sessionStorage.getItem("user")) ?? null);
+import { Route, Routes } from "@solidjs/router";
+import Home from "./Home";
 
 const App: Component = () => {
 	return (
-		<div class="flex h-screen">
-			<div class="grid grid-cols-4 w-full h-full items-center justify-items-center">
-				<div class="flex flex-col justify-start col-span-1 h-full w-full border-r border-r-gray-600">
-					<Show
-						when={user()}
-						fallback={
-							<div class="border-b border-b-gray-600 w-full">
-								<Login setUser={setUser} />
-							</div>
-						}
-					>
-						<div class="border-b border-b-gray-600 w-full">
-							<UserInfo {...user()} />
-						</div>
-					</Show>
-					<Users />
-				</div>
-				<div class="flex flex-col items-center justify-start col-span-3 h-full w-full">
-					<div class="border-b border-b-gray-600 w-full">
-						<CreateMsg user={user().name} />
-					</div>
-					<Messages user={user().name} />
-				</div>
-			</div>
-		</div>
+		<Routes>
+			<Route path="/users/:name" component={Home} />
+			<Route path="/login" component={Login} />
+		</Routes>
 	);
 };
 
