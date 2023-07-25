@@ -8,9 +8,9 @@ use actix_web::{
 };
 use dotenvy::dotenv;
 use env_logger::Env;
-use oauth2::{basic::BasicClient, reqwest::async_http_client, TokenResponse};
 use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, Scope, TokenUrl,
+    basic::BasicClient, reqwest::async_http_client, AuthUrl, AuthorizationCode, ClientId,
+    ClientSecret, CsrfToken, RedirectUrl, Scope, TokenUrl,
 };
 use serde::Deserialize;
 use std::env;
@@ -172,16 +172,17 @@ async fn login(data: Data<AppState>) -> impl Responder {
     let (authorize_url, _csrf_state) = data
         .oauth
         .authorize_url(CsrfToken::new_random)
-        .add_scope(Scope::new("user".to_string()))
-        // .add_scope(Scope::new("user:email".to_string()))
+        .add_scope(Scope::new(
+            "https://www.googleapis.com/auth/userinfo.profile".to_string(),
+        ))
         .url();
     HttpResponse::Found()
         .insert_header((header::LOCATION, authorize_url.to_string()))
         .finish()
 }
 
-#[get("/auth/github")]
-async fn auth_github(data: Data<AppState>, params: Query<AuthRequest>) -> impl Responder {
+#[get("/auth/google")]
+async fn auth_google(data: Data<AppState>, params: Query<AuthRequest>) -> impl Responder {
     let code = AuthorizationCode::new(params.code.clone());
     let _state = CsrfToken::new(params.state.clone());
     let token_res = &data
@@ -190,14 +191,14 @@ async fn auth_github(data: Data<AppState>, params: Query<AuthRequest>) -> impl R
         .request_async(async_http_client)
         .await;
     match token_res {
-        Ok(token) => {
-            let name = get_user_from_github(format!("{:?}", token.access_token().secret()))
-                .await
-                .expect("To be able to get the current github user");
+        Ok(_token) => {
+            // let name = get_user_from_google(format!("{:?}", token.access_token().secret()))
+            //     .await
+            //     .expect("To be able to get the current google user");
             HttpResponse::Found()
                 .insert_header((
                     header::LOCATION,
-                    format!("http://localhost:3000/users/{name}"),
+                    format!("http://localhost:3000/users/Noah"),
                 ))
                 .finish()
         }
@@ -208,21 +209,18 @@ async fn auth_github(data: Data<AppState>, params: Query<AuthRequest>) -> impl R
     }
 }
 
-async fn get_user_from_github(token: String) -> anyhow::Result<String> {
-    let client = reqwest::Client::new();
-    let res = client
-        .get("https://api.github.com/user")
-        .bearer_auth(token)
-        .header(header::ACCEPT, "application/vnd.github+json")
-        .header(header::USER_AGENT, "npritchard9")
-        .header("X-GitHub-Api-Version", "2022-11-28")
-        .send()
-        .await?
-        .json::<GithubUser>()
-        .await?;
-    log::info!("res: {res:?}");
-    Ok(res.name)
-}
+// async fn get_user_from_google(token: String) -> anyhow::Result<String> {
+//     let client = reqwest::Client::new();
+//     let res = client
+//         .get("https://www.googleapis.com/oauth2/v3/userinfo")
+//         .bearer_auth(token)
+//         .send()
+//         .await?
+//         .json::<GoogleUser>()
+//         .await?;
+//     log::info!("res: {res:?}");
+//     Ok(res.name)
+// }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -232,27 +230,27 @@ async fn main() -> std::io::Result<()> {
 
     let db = get_db().await.expect("The db to exist");
     HttpServer::new(move || {
-        let github_client_id = ClientId::new(
-            env::var("GITHUB_CLIENT_ID")
-                .expect("Missing the GITHUB_CLIENT_ID environment variable."),
+        let google_client_id = ClientId::new(
+            env::var("GOOGLE_CLIENT_ID")
+                .expect("Missing the GOOGLE_CLIENT_ID environment variable."),
         );
-        let github_client_secret = ClientSecret::new(
-            env::var("GITHUB_CLIENT_SECRET")
-                .expect("Missing the GITHUB_CLIENT_SECRET environment variable."),
+        let google_client_secret = ClientSecret::new(
+            env::var("GOOGLE_CLIENT_SECRET")
+                .expect("Missing the GOOGLE_CLIENT_SECRET environment variable."),
         );
-        let auth_url = AuthUrl::new("https://github.com/login/oauth/authorize".to_string())
+        let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string())
             .expect("Invalid authorization endpoint URL");
-        let token_url = TokenUrl::new("https://github.com/login/oauth/access_token".to_string())
+        let token_url = TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".to_string())
             .expect("Invalid token endpoint URL");
 
         let client = BasicClient::new(
-            github_client_id,
-            Some(github_client_secret),
+            google_client_id,
+            Some(google_client_secret),
             auth_url,
             Some(token_url),
         )
         .set_redirect_uri(
-            RedirectUrl::new("http://localhost:8080/auth/github".to_string())
+            RedirectUrl::new("http://localhost:8080/auth/google".to_string())
                 .expect("Invalid redirect URL"),
         );
         let cors = Cors::permissive();
@@ -264,7 +262,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(cors)
             .service(login)
-            .service(auth_github)
+            .service(auth_google)
             .service(get_msgs)
             .service(get_replies)
             .service(get_me)

@@ -7,13 +7,18 @@ export default function Users() {
 		let users: User[] = await (await fetch("http://127.0.0.1:8080/users")).json();
 		return users;
 	}
-	const user_query = createQuery(() => ["users"], fetchUsers);
+	const user_query = createQuery(() => {
+		return {
+			queryKey: ["users"],
+			queryFn: fetchUsers,
+		};
+	});
 
 	return (
 		<div class="bg-gray-700 rounded-xl m-2">
 			<div class="text-2xl font-bold p-2">Who to follow</div>
 			<Switch>
-				<Match when={user_query.isLoading}>
+				<Match when={user_query.isPending}>
 					<div>Loading...</div>
 				</Match>
 				<Match when={user_query.isError}>

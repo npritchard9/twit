@@ -30,8 +30,12 @@ export default function Messages(props: { user: string }) {
 		let msgs: UserAndPost[] = await (await fetch("http://127.0.0.1:8080/msgs")).json();
 		return msgs;
 	}
-	const msg_query = createQuery(() => ["msgs"], fetchMsgs);
-	const me_query = createQuery(() => ["me"], fetchMe);
+	const msg_query = createQuery(() => {
+		return { queryKey: ["msgs"], queryFn: fetchMsgs };
+	});
+	const me_query = createQuery(() => {
+		return { queryKey: ["me"], queryFn: fetchMe };
+	});
 
 	return (
 		<div
@@ -66,7 +70,7 @@ export default function Messages(props: { user: string }) {
 					when={view() === "All"}
 					fallback={
 						<Switch>
-							<Match when={me_query.isLoading}>
+							<Match when={me_query.isPending}>
 								<div>Loading...</div>
 							</Match>
 							<Match when={me_query.isError}>
@@ -108,7 +112,7 @@ export default function Messages(props: { user: string }) {
 					}
 				>
 					<Switch>
-						<Match when={msg_query.isLoading}>
+						<Match when={msg_query.isPending}>
 							<div>Loading...</div>
 						</Match>
 						<Match when={msg_query.isError}>
@@ -163,44 +167,44 @@ type MsgProps = {
 export const Msg = (props: MsgProps) => {
 	// const [like, setLike] = createSignal(false);
 	const qc = useQueryClient();
-	const delete_msg = createMutation(
-		async () => {
-			let json: LikePost = { id: props.msg.id, user: props.user };
-			await fetch("http://127.0.0.1:8080/delete_msg", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(json),
-			});
-		},
-		{
+	const delete_msg = createMutation(() => {
+		return {
+			mutationFn: async () => {
+				let json: LikePost = { id: props.msg.id, user: props.user };
+				await fetch("http://127.0.0.1:8080/delete_msg", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(json),
+				});
+			},
 			onSuccess: () => {
 				qc.invalidateQueries({ queryKey: ["msgs"] });
 				qc.invalidateQueries({ queryKey: ["me"] });
 			},
-		}
-	);
+		};
+	});
 
-	const like_msg = createMutation(
-		async () => {
-			let json: LikePost = { id: props.msg.id, user: props.user };
-			console.log(json);
-			await fetch("http://127.0.0.1:8080/like_msg", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(json),
-			});
-		},
-		{
+	const like_msg = createMutation(() => {
+		return {
+			mutationFn: async () => {
+				let json: LikePost = { id: props.msg.id, user: props.user };
+				console.log(json);
+				await fetch("http://127.0.0.1:8080/like_msg", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(json),
+				});
+			},
 			onSuccess: () => {
 				qc.invalidateQueries({ queryKey: ["msgs"] });
 				qc.invalidateQueries({ queryKey: ["me"] });
 			},
-		}
-	);
+		};
+	});
 
 	let utc = new Date(props.msg.ts);
 

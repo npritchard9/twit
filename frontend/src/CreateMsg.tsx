@@ -7,25 +7,25 @@ const [msg, setMsg] = createSignal("");
 
 export default function CreateMsg(props: { user: string }) {
 	const qc = useQueryClient();
-	const msg_mutation = createMutation(
-		async () => {
-			let json: UserPost = { user: props.user, msg: msg(), likes: 0 };
-			await fetch("http://127.0.0.1:8080/create_msg", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(json),
-			});
-		},
-		{
+	const msg_mutation = createMutation(() => {
+		return {
+			mutationFn: async () => {
+				let json: UserPost = { user: props.user, msg: msg(), likes: 0 };
+				await fetch("http://127.0.0.1:8080/create_msg", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(json),
+				});
+			},
 			onSuccess: () => {
 				setMsg("");
 				qc.invalidateQueries({ queryKey: ["msgs"] });
 				qc.invalidateQueries({ queryKey: ["me"] });
 			},
-		}
-	);
+		};
+	});
 
 	const post_msg = () => {
 		msg_mutation.mutate();
@@ -33,7 +33,7 @@ export default function CreateMsg(props: { user: string }) {
 	return (
 		<div class="flex items-center justify-center h-16">
 			<Switch>
-				<Match when={msg_mutation.isLoading}>
+				<Match when={msg_mutation.isPending}>
 					<div>Posting...</div>
 				</Match>
 				<Match when={msg_mutation.isError}>

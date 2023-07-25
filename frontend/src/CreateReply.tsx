@@ -15,36 +15,35 @@ type ReplyProps = {
 export default function CreateReply(props: ReplyProps) {
 	const qc = useQueryClient();
 
-	const reply_msg = createMutation(
-		async () => {
-			let json: UserReply = {
-				postid: props.msg.id,
-				user: props.user,
-				msg: msg(),
-				likes: props.msg.likes,
-			};
-			await fetch("http://127.0.0.1:8080/reply_msg", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(json),
-			});
-		},
-		{
+	const reply_msg = createMutation(() => {
+		return {
+			mutationFn: async () => {
+				let json: UserReply = {
+					postid: props.msg.id,
+					user: props.user,
+					msg: msg(),
+				};
+				await fetch("http://127.0.0.1:8080/reply_msg", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(json),
+				});
+			},
 			onSuccess: () => {
 				setMsg("");
 				props.setReplying(null);
 				qc.invalidateQueries({ queryKey: ["msgs"] });
 				qc.invalidateQueries({ queryKey: ["me"] });
 			},
-		}
-	);
+		};
+	});
 
 	return (
 		<div class="flex items-center justify-center h-16">
 			<Switch>
-				<Match when={reply_msg.isLoading}>
+				<Match when={reply_msg.isPending}>
 					<div>Posting...</div>
 				</Match>
 				<Match when={reply_msg.isError}>

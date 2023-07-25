@@ -18,13 +18,18 @@ export default function Replies(props: {
 		return msgs;
 	}
 
-	const replies = createQuery(() => ["replies"], fetchReplies);
+	const replies = createQuery(() => {
+		return {
+			queryKey: ["replies"],
+			queryFn: fetchReplies,
+		};
+	});
 
 	return (
 		<div class="flex flex-col items-center justify-center mt-2 px-4 w-full">
 			<div class="flex flex-col justify-start w-full">
 				<Switch>
-					<Match when={replies.isLoading}>
+					<Match when={replies.isPending}>
 						<div>Loading...</div>
 					</Match>
 					<Match when={replies.isError}>
