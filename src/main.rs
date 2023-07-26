@@ -101,8 +101,20 @@ async fn get_msgs(data: Data<AppState>) -> impl Responder {
 }
 
 #[get("/msg/{id}")]
-async fn get_replies(id: Path<String>, data: Data<AppState>) -> impl Responder {
+async fn get_msg(id: Path<String>, data: Data<AppState>) -> impl Responder {
     log::info!("Request to /msg/{id}");
+    match get_post(id.to_string(), &data.db).await {
+        Ok(msg) => HttpResponse::Ok().json(msg),
+        Err(e) => {
+            println!("Failed to execute query: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+#[get("/msg/{id}/replies")]
+async fn get_replies(id: Path<String>, data: Data<AppState>) -> impl Responder {
+    log::info!("Request to /msg/{id}/replies");
     match get_replies_to_post(id.to_string(), &data.db).await {
         Ok(msg) => HttpResponse::Ok().json(msg),
         Err(e) => {
@@ -160,9 +172,6 @@ async fn login(data: Data<AppState>) -> impl Responder {
     let (authorize_url, _csrf_state) = data
         .oauth
         .authorize_url(CsrfToken::new_random)
-        // .add_scope(Scope::new(
-        //     "https://www.googleapis.com/auth/userinfo.profile".to_string(),
-        // ))
         .add_scope(Scope::new("openid email profile".into()))
         .url();
     HttpResponse::Found()
@@ -273,6 +282,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .service(login)
             .service(auth_google)
+            .service(get_msg)
             .service(get_msgs)
             .service(get_replies)
             .service(get_me)

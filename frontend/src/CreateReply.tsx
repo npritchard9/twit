@@ -1,4 +1,4 @@
-import { Match, Setter, Switch, createSignal } from "solid-js";
+import { Match, Switch, createSignal } from "solid-js";
 import { SendButton } from "./assets/svgs";
 import { createMutation, useQueryClient } from "@tanstack/solid-query";
 import { type UserReply } from "../../bindings/UserReply";
@@ -9,7 +9,6 @@ const [msg, setMsg] = createSignal("");
 type ReplyProps = {
 	user: string;
 	msg: DBPost;
-	setReplying: Setter<DBPost | null>;
 };
 
 export default function CreateReply(props: ReplyProps) {
@@ -33,7 +32,6 @@ export default function CreateReply(props: ReplyProps) {
 			},
 			onSuccess: () => {
 				setMsg("");
-				props.setReplying(null);
 				qc.invalidateQueries({ queryKey: ["msgs"] });
 				qc.invalidateQueries({ queryKey: ["me"] });
 			},

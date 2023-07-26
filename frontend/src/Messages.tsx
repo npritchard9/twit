@@ -1,19 +1,19 @@
 import { createMutation, createQuery, useQueryClient } from "@tanstack/solid-query";
-import { Switch, Match, For, createSignal, Show, Setter, createEffect } from "solid-js";
+import { Switch, Match, For, createSignal, Show, createEffect } from "solid-js";
 import { type DBPost } from "../../bindings/DBPost";
 import { type UserAndPost } from "../../bindings/UserAndPost";
 import { type LikePost } from "../../bindings/LikePost";
 import { DeleteButton, HeartButton, ReplyButton } from "./assets/svgs";
-import CreateReply from "./CreateReply";
-import Replies from "./Replies";
+import { A } from "@solidjs/router";
 
 type View = "All" | "Me";
+type MessagesProps = {
+	user: string;
+};
 const [currMsg, setCurrMsg] = createSignal<DBPost | null>();
 
-export default function Messages(props: { user: string }) {
+export default function Messages(props: MessagesProps) {
 	const [view, setView] = createSignal<View>("All");
-	const [replying, setReplying] = createSignal<DBPost | null>();
-	const [showReplies, setShowReplies] = createSignal(false);
 
 	createEffect(() => {
 		console.log("curr msg: ", currMsg());
@@ -38,11 +38,7 @@ export default function Messages(props: { user: string }) {
 	});
 
 	return (
-		<div
-			class={`flex flex-col items-center justify-center mt-2 px-4 w-full ${
-				replying ?? "bg-gray-500"
-			}`}
-		>
+		<div class="flex flex-col items-center justify-center mt-2 px-4 w-full">
 			<div class="flex justify-center gap-4 w-full items-center pb-2 border-b border-b-gray-800">
 				<button
 					class={`${
@@ -78,35 +74,8 @@ export default function Messages(props: { user: string }) {
 							</Match>
 							<Match when={me_query.isSuccess}>
 								<For each={me_query.data}>
-									{msg => (
-										<Msg
-											msg={msg.post}
-											user={msg.user.name}
-											setReplying={setReplying}
-											setShowReplies={setShowReplies}
-										/>
-									)}
+									{msg => <Msg msg={msg.post} user={msg.user.name} />}
 								</For>
-								<Switch>
-									<Match when={replying()}>
-										<div class="z-10">
-											<CreateReply
-												user={props.user}
-												msg={replying()}
-												setReplying={setReplying}
-											/>
-										</div>
-									</Match>
-									<Match when={showReplies()}>
-										<div>
-											<Replies
-												user={props.user}
-												msg={currMsg}
-												setShowReplies={setShowReplies}
-											/>
-										</div>
-									</Match>
-								</Switch>
 							</Match>
 						</Switch>
 					}
@@ -120,35 +89,8 @@ export default function Messages(props: { user: string }) {
 						</Match>
 						<Match when={msg_query.isSuccess}>
 							<For each={msg_query.data}>
-								{msg => (
-									<Msg
-										msg={msg.post}
-										user={msg.user.name}
-										setReplying={setReplying}
-										setShowReplies={setShowReplies}
-									/>
-								)}
+								{msg => <Msg msg={msg.post} user={msg.user.name} />}
 							</For>
-							<Switch>
-								<Match when={replying()}>
-									<div class="z-10">
-										<CreateReply
-											user={props.user}
-											msg={replying()}
-											setReplying={setReplying}
-										/>
-									</div>
-								</Match>
-								<Match when={showReplies()}>
-									<div>
-										<Replies
-											user={props.user}
-											msg={currMsg}
-											setShowReplies={setShowReplies}
-										/>
-									</div>
-								</Match>
-							</Switch>
 						</Match>
 					</Switch>
 				</Show>
@@ -160,12 +102,9 @@ export default function Messages(props: { user: string }) {
 type MsgProps = {
 	msg: DBPost;
 	user: string;
-	setReplying: Setter<DBPost | null>;
-	setShowReplies: Setter<boolean>;
 };
 
 export const Msg = (props: MsgProps) => {
-	// const [like, setLike] = createSignal(false);
 	const qc = useQueryClient();
 	const delete_msg = createMutation(() => {
 		return {
@@ -212,7 +151,6 @@ export const Msg = (props: MsgProps) => {
 		<div
 			class="flex flex-col border-b border-b-gray-800 p-2"
 			onclick={() => {
-				props.setShowReplies(true);
 				setCurrMsg(props.msg);
 			}}
 		>
@@ -222,14 +160,9 @@ export const Msg = (props: MsgProps) => {
 			</div>
 			<div>{props.msg.msg}</div>
 			<div class="flex gap-4 items-center">
-				<button
-					class="text-gray-600 hover:text-sky-700"
-					onclick={() => {
-						props.setReplying(props.msg);
-					}}
-				>
+				<A href={`/post/${props.msg.id}`} class="text-gray-600 hover:text-sky-700">
 					<ReplyButton />
-				</button>
+				</A>
 				<button
 					class="text-gray-600 hover:text-pink-400"
 					onclick={() => {

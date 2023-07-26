@@ -44,10 +44,14 @@ pub async fn insert_post(post: UserPost, db: &Surreal<Db>) -> anyhow::Result<DBP
     }
 }
 
-pub async fn get_post(id: String, db: &Surreal<Db>) -> anyhow::Result<DBPost> {
-    let split: Vec<&str> = id.split(":").collect();
-    let post: DBPost = db.select((split[0], split[1])).await?;
-    Ok(post)
+pub async fn get_post(id: String, db: &Surreal<Db>) -> anyhow::Result<UserAndPost> {
+    let mut res = db
+        .query(format!(
+            "select in.* as user, out.* as post from wrote where out.id = {id}"
+        ))
+        .await?;
+    let post: Option<UserAndPost> = res.take(0)?;
+    Ok(post.expect("This user and post has to exist in the db"))
 }
 
 pub async fn get_posts(db: &Surreal<Db>) -> anyhow::Result<Vec<UserAndPost>> {
