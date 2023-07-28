@@ -9,7 +9,6 @@ use super::User;
 #[ts(export)]
 pub struct UserPost {
     pub msg: String,
-    pub likes: u32,
     pub user: String,
 }
 
@@ -17,6 +16,8 @@ pub struct UserPost {
 #[ts(export)]
 pub struct DBPost {
     pub msg: String,
+    #[ts(type = "string")]
+    pub user: RecordId,
     pub likes: u32,
     pub ts: DateTime<Utc>,
     #[ts(type = "string")]
@@ -42,5 +43,12 @@ pub struct LikePost {
 #[ts(export)]
 pub struct UserAndPost {
     pub user: User,
-    pub post: DBPost,
+    pub msg: String,
+    pub likes: u32,
+    pub ts: DateTime<Utc>,
+    #[ts(type = "string")]
+    pub id: RecordId,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TestPost(Vec<DBPost>);

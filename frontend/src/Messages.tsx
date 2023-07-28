@@ -1,6 +1,5 @@
 import { createMutation, createQuery, useQueryClient } from "@tanstack/solid-query";
 import { Switch, Match, For, createSignal, Show, createEffect } from "solid-js";
-import { type DBPost } from "../../bindings/DBPost";
 import { type UserAndPost } from "../../bindings/UserAndPost";
 import { type LikePost } from "../../bindings/LikePost";
 import { DeleteButton, HeartButton, ReplyButton } from "./assets/svgs";
@@ -10,7 +9,7 @@ type View = "All" | "Me";
 type MessagesProps = {
 	user: string;
 };
-const [currMsg, setCurrMsg] = createSignal<DBPost | null>();
+const [currMsg, setCurrMsg] = createSignal<UserAndPost | null>();
 
 export default function Messages(props: MessagesProps) {
 	const [view, setView] = createSignal<View>("All");
@@ -74,7 +73,7 @@ export default function Messages(props: MessagesProps) {
 							</Match>
 							<Match when={me_query.isSuccess}>
 								<For each={me_query.data}>
-									{msg => <Msg msg={msg.post} user={msg.user.name} />}
+									{msg => <Msg data={msg} extra={props.user} />}
 								</For>
 							</Match>
 						</Switch>
@@ -89,7 +88,7 @@ export default function Messages(props: MessagesProps) {
 						</Match>
 						<Match when={msg_query.isSuccess}>
 							<For each={msg_query.data}>
-								{msg => <Msg msg={msg.post} user={msg.user.name} />}
+								{msg => <Msg data={msg} extra={props.user} />}
 							</For>
 						</Match>
 					</Switch>
@@ -100,8 +99,8 @@ export default function Messages(props: MessagesProps) {
 }
 
 type MsgProps = {
-	msg: DBPost;
-	user: string;
+	data: UserAndPost;
+	extra: string;
 };
 
 export const Msg = (props: MsgProps) => {
@@ -109,7 +108,10 @@ export const Msg = (props: MsgProps) => {
 	const delete_msg = createMutation(() => {
 		return {
 			mutationFn: async () => {
-				let json: LikePost = { id: props.msg.id, user: props.user };
+				let json: LikePost = {
+					id: props.data.id,
+					user: props.data.user.name ?? props.extra,
+				};
 				await fetch("http://127.0.0.1:8080/delete_msg", {
 					method: "POST",
 					headers: {
@@ -128,7 +130,7 @@ export const Msg = (props: MsgProps) => {
 	const like_msg = createMutation(() => {
 		return {
 			mutationFn: async () => {
-				let json: LikePost = { id: props.msg.id, user: props.user };
+				let json: LikePost = { id: props.data.id, user: props.data.user.name };
 				console.log(json);
 				await fetch("http://127.0.0.1:8080/like_msg", {
 					method: "POST",
@@ -145,22 +147,22 @@ export const Msg = (props: MsgProps) => {
 		};
 	});
 
-	let utc = new Date(props.msg.ts);
+	let utc = new Date(props.data.ts);
 
 	return (
 		<div
 			class="flex flex-col border-b border-b-gray-800 p-2"
 			onclick={() => {
-				setCurrMsg(props.msg);
+				setCurrMsg(props.data);
 			}}
 		>
 			<div class="flex gap-2 items-center">
-				<div class="font-bold">{props.user}</div>
+				<div class="font-bold">{props.data.user.name ?? props.extra}</div>
 				<div class="text-gray-600 text-sm">{utc.toLocaleString()}</div>
 			</div>
-			<div>{props.msg.msg}</div>
+			<div>{props.data.msg}</div>
 			<div class="flex gap-4 items-center">
-				<A href={`/post/${props.msg.id}`} class="text-gray-600 hover:text-sky-700">
+				<A href={`/post/${props.data.id}`} class="text-gray-600 hover:text-sky-700">
 					<ReplyButton />
 				</A>
 				<button
@@ -171,10 +173,14 @@ export const Msg = (props: MsgProps) => {
 				>
 					<div class="flex gap-2 items-center">
 						<HeartButton />
-						{props.msg.likes.toString()}
+						{props.data.likes.toString()}
 					</div>
 				</button>
-				<Show when={props.user === props.user}>
+				<Show
+					when={
+						props.data.user.name === undefined || props.data.user.name === props.extra
+					}
+				>
 					<button
 						class="text-gray-600 hover:text-red-700"
 						onclick={() => delete_msg.mutate()}

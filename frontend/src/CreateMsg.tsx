@@ -10,7 +10,7 @@ export default function CreateMsg(props: { user: string }) {
 	const msg_mutation = createMutation(() => {
 		return {
 			mutationFn: async () => {
-				let json: UserPost = { user: props.user, msg: msg(), likes: 0 };
+				let json: UserPost = { user: props.user, msg: msg() };
 				await fetch("http://127.0.0.1:8080/create_msg", {
 					method: "POST",
 					headers: {
