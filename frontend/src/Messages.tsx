@@ -109,7 +109,7 @@ export const Msg = (props: MsgProps) => {
 		return {
 			mutationFn: async () => {
 				let json: LikePost = {
-					id: props.data.id,
+					id: props.data.post.id,
 					user: props.data.user.name ?? props.extra,
 				};
 				await fetch("http://127.0.0.1:8080/delete_msg", {
@@ -130,7 +130,7 @@ export const Msg = (props: MsgProps) => {
 	const like_msg = createMutation(() => {
 		return {
 			mutationFn: async () => {
-				let json: LikePost = { id: props.data.id, user: props.data.user.name };
+				let json: LikePost = { id: props.data.post.id, user: props.data.user.name };
 				console.log(json);
 				await fetch("http://127.0.0.1:8080/like_msg", {
 					method: "POST",
@@ -147,7 +147,12 @@ export const Msg = (props: MsgProps) => {
 		};
 	});
 
-	let utc = new Date(props.data.ts);
+    console.log("POST IN HERE IS: ", props.data)
+
+	if (props.data === undefined || props.data.user === undefined || props.data.post === undefined) {
+		return <div>Empty</div>;
+	}
+	let utc = new Date(props.data.post.ts);
 
 	return (
 		<div
@@ -160,9 +165,9 @@ export const Msg = (props: MsgProps) => {
 				<div class="font-bold">{props.data.user.name ?? props.extra}</div>
 				<div class="text-gray-600 text-sm">{utc.toLocaleString()}</div>
 			</div>
-			<div>{props.data.msg}</div>
+			<div>{props.data.post.msg}</div>
 			<div class="flex gap-4 items-center">
-				<A href={`/post/${props.data.id}`} class="text-gray-600 hover:text-sky-700">
+				<A href={`/post/${props.data.post.id}`} class="text-gray-600 hover:text-sky-700">
 					<ReplyButton />
 				</A>
 				<button
@@ -173,7 +178,7 @@ export const Msg = (props: MsgProps) => {
 				>
 					<div class="flex gap-2 items-center">
 						<HeartButton />
-						{props.data.likes.toString()}
+						{props.data.post.likes.toString()}
 					</div>
 				</button>
 				<Show

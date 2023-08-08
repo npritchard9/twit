@@ -43,7 +43,11 @@ export default function PostAndReplies() {
 						<div class="border-b border-b-gray-600 w-full">
 							<CreateReply user={name()} msg={post.data} />
 						</div>
-						<Replies user={name()} msg={post.data} id={id} />
+						<Replies
+							user={name()}
+							data={{ post: post.data, user: { name: name(), bio: "" } }}
+							id={id}
+						/>
 					</div>
 				</div>
 			</Match>

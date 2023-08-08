@@ -45,3 +45,14 @@ pub struct UserAndPost {
     pub user: User,
     pub post: DBPost,
 }
+
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct DBPostAndUser {
+    pub msg: String,
+    pub user: User,
+    pub likes: u32,
+    pub ts: DateTime<Utc>,
+    #[ts(type = "string")]
+    pub id: RecordId,
+}
