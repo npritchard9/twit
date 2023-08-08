@@ -43,12 +43,5 @@ pub struct LikePost {
 #[ts(export)]
 pub struct UserAndPost {
     pub user: User,
-    pub msg: String,
-    pub likes: u32,
-    pub ts: DateTime<Utc>,
-    #[ts(type = "string")]
-    pub id: RecordId,
+    pub post: DBPost,
 }
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TestPost(Vec<DBPost>);

@@ -26,15 +26,13 @@ pub async fn insert_user(user: User, db: &Surreal<Db>) -> anyhow::Result<User> {
 
 pub async fn insert_post(post: UserPost, db: &Surreal<Db>) -> anyhow::Result<()> {
     let mut _res = db
-        .query("begin transaction")
-        .query("let $now = time::now()")
         .query(format!(
-            "let $post = create post set msg = '{}', user = user:{}, likes = 0, ts = $now",
+            "let $post = create post set msg = '{}', user = user:{}, likes = 0, ts = time::now();
+            relate user:{}->wrote->($post.id);",
             post.msg,
-            post.user.clone()
+            post.user.clone(),
+            post.user
         ))
-        .query(format!("update user:{} set posts += $post.id", post.user))
-        .query("commit transaction")
         .await?;
     Ok(())
 }
@@ -47,32 +45,35 @@ pub async fn get_post(id: String, db: &Surreal<Db>) -> anyhow::Result<UserAndPos
 
 pub async fn get_posts(db: &Surreal<Db>) -> anyhow::Result<Vec<UserAndPost>> {
     let mut res = db
-        .query("select *, user.* from post order by ts desc")
+        .query("select <-user.* as user, ->post.* as post from wrote split post, user")
         .await?;
-    let posts = res.take(0)?;
+    let posts: Vec<UserAndPost> = res.take(0)?;
     Ok(posts)
 }
 
-pub async fn get_posts_from_user(user: String, db: &Surreal<Db>) -> anyhow::Result<TestPost> {
+pub async fn get_posts_from_user(
+    user: String,
+    db: &Surreal<Db>,
+) -> anyhow::Result<Vec<UserAndPost>> {
     let mut res = db
         .query(format!(
-            "select value posts.*.* from user:{}",
+            "select <-user.* as user, ->post.* as post from wrote where in = user:{} split post, user",
             user
         ))
         .await?;
-    let posts: Option<TestPost> = res.take(0)?;
-    Ok(posts.expect("these posts must exists for the user"))
+    let posts: Vec<UserAndPost> = res.take(0)?;
+    Ok(posts)
 }
 
-pub async fn get_replies_to_post(postid: String, db: &Surreal<Db>) -> anyhow::Result<Vec<DBPost>> {
+pub async fn get_replies_to_post(postid: String, db: &Surreal<Db>) -> anyhow::Result<UserAndPost> {
     let mut replies = db
         .query(format!(
             "select value in.* from replied where {} = out",
             postid
         ))
         .await?;
-    let r = replies.take(0)?;
-    Ok(r)
+    let r: Option<UserAndPost> = replies.take(0)?;
+    Ok(r.expect("these replies must exist for the user"))
 }
 
 pub async fn insert_reply(reply: UserReply, db: &Surreal<Db>) -> anyhow::Result<()> {
@@ -81,7 +82,7 @@ pub async fn insert_reply(reply: UserReply, db: &Surreal<Db>) -> anyhow::Result<
             "begin transaction;
             let $now = time::now();
             let $reply = create post set msg = '{}', user = '{}', likes = 0, ts = $now;
-            update user:{} set posts += $reply.id;
+            update user:{}->wrote->$reply.id;
             relate $reply.id->replied->{};
             commit transaction;
             ",
@@ -93,13 +94,8 @@ pub async fn insert_reply(reply: UserReply, db: &Surreal<Db>) -> anyhow::Result<
 
 pub async fn delete_post(post: LikePost, db: &Surreal<Db>) -> anyhow::Result<()> {
     let split: Vec<&str> = post.id.split(":").collect();
+    // should work
     let _post: Option<DBPost> = db.delete((split[0], split[1])).await?;
-    let _remove_user = db
-        .query(format!(
-            "update user:{} set posts = posts[where $this != {}]",
-            &post.user, &post.id
-        ))
-        .await?;
     Ok(())
 }
 
