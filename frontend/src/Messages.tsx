@@ -27,6 +27,7 @@ export default function Messages(props: MessagesProps) {
 
 	async function fetchMsgs() {
 		let msgs: UserAndPost[] = await (await fetch("http://127.0.0.1:8080/msgs")).json();
+        console.log("fetched: ", msgs)
 		return msgs;
 	}
 	const msg_query = createQuery(() => {
@@ -131,7 +132,7 @@ export const Msg = (props: MsgProps) => {
 		return {
 			mutationFn: async () => {
 				let json: LikePost = { id: props.data.post.id, user: props.data.user.name };
-				console.log(json);
+				console.log("Post to like: ", json);
 				await fetch("http://127.0.0.1:8080/like_msg", {
 					method: "POST",
 					headers: {

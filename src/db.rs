@@ -1,10 +1,11 @@
-use surrealdb::engine::local::{Db, File};
+use anyhow::anyhow;
+use surrealdb::engine::local::{Db, SpeeDb};
 use surrealdb::Surreal;
 
 use super::models::*;
 
 pub async fn get_db() -> surrealdb::Result<Surreal<Db>> {
-    let db = Surreal::new::<File>("posts.db").await?;
+    let db = Surreal::new::<SpeeDb>("~/rustprac/twit/posts.db").await?;
     db.use_ns("my_ns").use_db("my_db").await?;
     Ok(db)
 }
@@ -15,13 +16,19 @@ pub async fn get_all_users(db: &Surreal<Db>) -> anyhow::Result<Vec<User>> {
 }
 
 pub async fn check_user(user: &str, db: &Surreal<Db>) -> anyhow::Result<User> {
-    let u = db.select(("user", user)).await?;
-    Ok(u)
+    let user: Option<User> = db.select(("user", user)).await?;
+    match user {
+        Some(u) => Ok(u),
+        None => Err(anyhow!("Error retrieving user from db")),
+    }
 }
 
 pub async fn insert_user(user: User, db: &Surreal<Db>) -> anyhow::Result<User> {
-    let u = db.create(("user", user.name.clone())).content(user).await?;
-    Ok(u)
+    let user: Option<User> = db.create(("user", user.name.clone())).content(user).await?;
+    match user {
+        Some(u) => Ok(u),
+        None => Err(anyhow!("Error inserting user into db")),
+    }
 }
 
 pub async fn insert_post(post: UserPost, db: &Surreal<Db>) -> anyhow::Result<()> {
@@ -48,6 +55,7 @@ pub async fn get_posts(db: &Surreal<Db>) -> anyhow::Result<Vec<UserAndPost>> {
         .query("select <-user.* as user, ->post.* as post from wrote split post, user")
         .await?;
     let posts: Vec<UserAndPost> = res.take(0)?;
+    println!("example post: {}", posts.first().unwrap().post.id);
     Ok(posts)
 }
 

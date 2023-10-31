@@ -74,7 +74,7 @@ async fn delete_msg(post: Json<LikePost>, data: Data<AppState>) -> impl Responde
 }
 
 async fn like_msg(post: Json<LikePost>, data: Data<AppState>) -> impl Responder {
-    log::info!("Received {:?}", post);
+    log::info!("MESSAGE TO LIKE: {:?}", post);
 
     match like_post(post.0, &data.db).await {
         Ok(_) => {
