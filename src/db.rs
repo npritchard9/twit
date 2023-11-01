@@ -54,9 +54,24 @@ pub async fn get_posts(db: &Surreal<Db>) -> anyhow::Result<Vec<UserAndPost>> {
     let mut res = db
         .query("select <-user.* as user, ->post.* as post from wrote split post, user")
         .await?;
-    let posts: Vec<UserAndPost> = res.take(0)?;
-    println!("example post: {}", posts.first().unwrap().post.id);
-    Ok(posts)
+    let posts: Vec<UserAndDBPost> = res.take(0)?;
+    let mut uposts: Vec<UserAndPost> = vec![];
+    for post in posts {
+        let user = post.post.user.to_raw();
+        let id = post.post.id.to_raw();
+        let p = Post {
+            msg: post.post.msg,
+            user,
+            likes: post.post.likes,
+            ts: post.post.ts,
+            id,
+        };
+        uposts.push(UserAndPost {
+            user: post.user,
+            post: p,
+        });
+    }
+    Ok(uposts)
 }
 
 pub async fn get_posts_from_user(
@@ -69,8 +84,24 @@ pub async fn get_posts_from_user(
             user
         ))
         .await?;
-    let posts: Vec<UserAndPost> = res.take(0)?;
-    Ok(posts)
+    let posts: Vec<UserAndDBPost> = res.take(0)?;
+    let mut uposts: Vec<UserAndPost> = vec![];
+    for post in posts {
+        let user = post.post.user.to_raw();
+        let id = post.post.id.to_raw();
+        let p = Post {
+            msg: post.post.msg,
+            user,
+            likes: post.post.likes,
+            ts: post.post.ts,
+            id,
+        };
+        uposts.push(UserAndPost {
+            user: post.user,
+            post: p,
+        });
+    }
+    Ok(uposts)
 }
 
 pub async fn get_replies_to_post(

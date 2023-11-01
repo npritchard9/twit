@@ -12,16 +12,23 @@ pub struct UserPost {
     pub user: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, TS)]
-#[ts(export)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DBPost {
     pub msg: String,
-    #[ts(type = "string")]
     pub user: RecordId,
     pub likes: u32,
     pub ts: DateTime<Utc>,
-    #[ts(type = "string")]
     pub id: RecordId,
+}
+
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct Post {
+    pub msg: String,
+    pub user: String,
+    pub likes: u32,
+    pub ts: DateTime<Utc>,
+    pub id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -39,11 +46,17 @@ pub struct LikePost {
     pub id: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserAndDBPost {
+    pub user: User,
+    pub post: DBPost,
+}
+
 #[derive(Debug, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct UserAndPost {
     pub user: User,
-    pub post: DBPost,
+    pub post: Post,
 }
 
 #[derive(Debug, Serialize, Deserialize, TS)]
