@@ -44,34 +44,26 @@ pub async fn insert_post(post: UserPost, db: &Surreal<Db>) -> anyhow::Result<()>
     Ok(())
 }
 
-pub async fn get_post(id: String, db: &Surreal<Db>) -> anyhow::Result<DBPostAndUser> {
-    let mut res = db.query(format!("select *, user.* from {id}")).await?;
-    let post: Option<DBPostAndUser> = res.take(0)?;
-    Ok(post.expect("This user and post have to exist in the db"))
+pub async fn get_post(id: String, db: &Surreal<Db>) -> anyhow::Result<UserAndPost> {
+    let mut res = db
+        .query(format!("select <-user.* as user, ->post.* as post from wrote where out = post:{} split post, user", id))
+        .await?;
+    let dbpost: Option<UserAndDBPost> = res.take(0)?;
+    if let Some(post) = dbpost {
+        let p = UserAndPost::from(post);
+        Ok(p)
+    } else {
+        Err(anyhow!("This user and post have to exist in the db"))
+    }
 }
 
 pub async fn get_posts(db: &Surreal<Db>) -> anyhow::Result<Vec<UserAndPost>> {
     let mut res = db
         .query("select <-user.* as user, ->post.* as post from wrote split post, user")
         .await?;
-    let posts: Vec<UserAndDBPost> = res.take(0)?;
-    let mut uposts: Vec<UserAndPost> = vec![];
-    for post in posts {
-        let user = post.post.user.to_raw();
-        let id = post.post.id.to_raw();
-        let p = Post {
-            msg: post.post.msg,
-            user,
-            likes: post.post.likes,
-            ts: post.post.ts,
-            id,
-        };
-        uposts.push(UserAndPost {
-            user: post.user,
-            post: p,
-        });
-    }
-    Ok(uposts)
+    let dbposts: Vec<UserAndDBPost> = res.take(0)?;
+    let posts: Vec<UserAndPost> = dbposts.into_iter().map(|p| UserAndPost::from(p)).collect();
+    Ok(posts)
 }
 
 pub async fn get_posts_from_user(
@@ -84,24 +76,9 @@ pub async fn get_posts_from_user(
             user
         ))
         .await?;
-    let posts: Vec<UserAndDBPost> = res.take(0)?;
-    let mut uposts: Vec<UserAndPost> = vec![];
-    for post in posts {
-        let user = post.post.user.to_raw();
-        let id = post.post.id.to_raw();
-        let p = Post {
-            msg: post.post.msg,
-            user,
-            likes: post.post.likes,
-            ts: post.post.ts,
-            id,
-        };
-        uposts.push(UserAndPost {
-            user: post.user,
-            post: p,
-        });
-    }
-    Ok(uposts)
+    let dbposts: Vec<UserAndDBPost> = res.take(0)?;
+    let posts: Vec<UserAndPost> = dbposts.into_iter().map(|p| UserAndPost::from(p)).collect();
+    Ok(posts)
 }
 
 pub async fn get_replies_to_post(
@@ -115,6 +92,7 @@ pub async fn get_replies_to_post(
         ))
         .await?;
     let r = replies.take(0)?;
+    println!("replies: {r:#?}");
     Ok(r)
 }
 
@@ -123,7 +101,7 @@ pub async fn insert_reply(reply: UserReply, db: &Surreal<Db>) -> anyhow::Result<
         .query(format!(
             "begin transaction;
             let $reply = create post set msg = '{}', user = 'user:{}', likes = 0, ts = time::now();
-            relate user:{}->wrote->($reply.id);
+            relate user:{}->wrote->post:($reply.id);
             relate ($reply.id)->replied->{};
             commit transaction;
             ",
@@ -134,16 +112,14 @@ pub async fn insert_reply(reply: UserReply, db: &Surreal<Db>) -> anyhow::Result<
 }
 
 pub async fn delete_post(post: LikePost, db: &Surreal<Db>) -> anyhow::Result<()> {
-    let split: Vec<&str> = post.id.split(":").collect();
-    // should work
-    let _post: Option<DBPost> = db.delete((split[0], split[1])).await?;
+    let _post: Option<DBPost> = db.delete(("post", post.id)).await?;
     Ok(())
 }
 
 pub async fn like_post(post: LikePost, db: &Surreal<Db>) -> anyhow::Result<()> {
     let mut liked_res = db
         .query(format!(
-            "select count() from liked where user:{} = in and {} = out group all",
+            "select count() from liked where user:{} = in and post:{} = out group all",
             &post.user, &post.id
         ))
         .await?;
@@ -151,21 +127,24 @@ pub async fn like_post(post: LikePost, db: &Surreal<Db>) -> anyhow::Result<()> {
     if let Some(Count { count: c }) = user_already_liked {
         println!("LIKE COUNT: {c}");
         let _remove_like = db
-            .query(format!("update {} set likes -= 1", &post.id))
+            .query(format!("update post:{} set likes -= 1", &post.id))
             .await?;
         let _remove_user = db
             .query(format!(
-                "delete user:{}->liked where out = {}",
+                "delete user:{}->liked where out = post:{}",
                 &post.user, &post.id
             ))
             .await?;
     } else {
         println!("USER HASN'T LIKED: {user_already_liked:#?}");
         let _add_like = db
-            .query(format!("update {} set likes += 1", &post.id))
+            .query(format!("update post:{} set likes += 1", &post.id))
             .await?;
         let _relate_user = db
-            .query(format!("relate user:{}->liked->{}", &post.user, &post.id))
+            .query(format!(
+                "relate user:{}->liked->post:{}",
+                &post.user, &post.id
+            ))
             .await?;
     }
     Ok(())

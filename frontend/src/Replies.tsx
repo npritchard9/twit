@@ -6,12 +6,12 @@ import CreateReply from "./CreateReply";
 import { UserAndPost } from "../../bindings/UserAndPost";
 
 export default function Replies(props: { user: string; data: UserAndPost; id: string }) {
-	console.log("REPLIES CUR MSG: ", props.data);
 	const [replying, setReplying] = createSignal<DBPost>();
 	async function fetchReplies() {
 		let msgs: UserAndPost[] = await (
 			await fetch(`http://127.0.0.1:8080/msg/${props.id}/replies`)
 		).json();
+		console.log("REPLIES: ", msgs);
 		return msgs;
 	}
 

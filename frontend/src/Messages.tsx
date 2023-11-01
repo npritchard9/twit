@@ -14,10 +14,6 @@ const [currMsg, setCurrMsg] = createSignal<UserAndPost | null>();
 export default function Messages(props: MessagesProps) {
 	const [view, setView] = createSignal<View>("All");
 
-	createEffect(() => {
-		console.log("curr msg: ", currMsg());
-	});
-
 	async function fetchMe() {
 		let msgs: UserAndPost[] = await (
 			await fetch(`http://127.0.0.1:8080/user/${encodeURI(props.user)}`)
@@ -27,7 +23,6 @@ export default function Messages(props: MessagesProps) {
 
 	async function fetchMsgs() {
 		let msgs: UserAndPost[] = await (await fetch("http://127.0.0.1:8080/msgs")).json();
-        console.log("fetched: ", msgs)
 		return msgs;
 	}
 	const msg_query = createQuery(() => {
@@ -132,7 +127,6 @@ export const Msg = (props: MsgProps) => {
 		return {
 			mutationFn: async () => {
 				let json: LikePost = { id: props.data.post.id, user: props.data.user.name };
-				console.log("Post to like: ", json);
 				await fetch("http://127.0.0.1:8080/like_msg", {
 					method: "POST",
 					headers: {
@@ -148,9 +142,11 @@ export const Msg = (props: MsgProps) => {
 		};
 	});
 
-    console.log("POST IN HERE IS: ", props.data)
-
-	if (props.data === undefined || props.data.user === undefined || props.data.post === undefined) {
+	if (
+		props.data === undefined ||
+		props.data.user === undefined ||
+		props.data.post === undefined
+	) {
 		return <div>Empty</div>;
 	}
 	let utc = new Date(props.data.post.ts);
@@ -179,7 +175,7 @@ export const Msg = (props: MsgProps) => {
 				>
 					<div class="flex gap-2 items-center">
 						<HeartButton />
-						{props.data.post.likes.toString()}
+						{props.data.post.likes ? props.data.post.likes.toString() : 0}
 					</div>
 				</button>
 				<Show

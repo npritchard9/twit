@@ -59,13 +59,17 @@ pub struct UserAndPost {
     pub post: Post,
 }
 
-#[derive(Debug, Serialize, Deserialize, TS)]
-#[ts(export)]
-pub struct DBPostAndUser {
-    pub msg: String,
-    pub user: User,
-    pub likes: u32,
-    pub ts: DateTime<Utc>,
-    #[ts(type = "string")]
-    pub id: RecordId,
+impl From<UserAndDBPost> for UserAndPost {
+    fn from(value: UserAndDBPost) -> Self {
+        Self {
+            user: value.user,
+            post: Post {
+                msg: value.post.msg,
+                user: value.post.user.id.to_raw(),
+                likes: value.post.likes,
+                ts: value.post.ts,
+                id: value.post.id.id.to_raw(),
+            },
+        }
+    }
 }

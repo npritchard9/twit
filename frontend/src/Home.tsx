@@ -8,7 +8,6 @@ import { onMount } from "solid-js";
 export default function Home() {
 	const params = useParams<{ name: string }>();
 	const name = decodeURI(params.name);
-	console.log(name);
 	onMount(() => {
 		sessionStorage.setItem("user", name);
 	});
