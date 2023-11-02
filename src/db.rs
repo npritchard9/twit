@@ -1,21 +1,23 @@
 use anyhow::anyhow;
-use surrealdb::engine::local::{Db, SpeeDb};
-use surrealdb::Surreal;
+use surrealdb::{
+    engine::remote::http::{Client, Https},
+    Surreal,
+};
 
 use super::models::*;
 
-pub async fn get_db() -> surrealdb::Result<Surreal<Db>> {
-    let db = Surreal::new::<SpeeDb>("~/rustprac/twit/posts.db").await?;
+pub async fn get_db() -> surrealdb::Result<Surreal<Client>> {
+    let db = Surreal::new::<Https>("twit.fly.dev").await?;
     db.use_ns("my_ns").use_db("my_db").await?;
     Ok(db)
 }
 
-pub async fn get_all_users(db: &Surreal<Db>) -> anyhow::Result<Vec<User>> {
+pub async fn get_all_users(db: &Surreal<Client>) -> anyhow::Result<Vec<User>> {
     let users = db.select("user").await?;
     Ok(users)
 }
 
-pub async fn check_user(user: &str, db: &Surreal<Db>) -> anyhow::Result<User> {
+pub async fn check_user(user: &str, db: &Surreal<Client>) -> anyhow::Result<User> {
     let user: Option<User> = db.select(("user", user)).await?;
     match user {
         Some(u) => Ok(u),
@@ -23,7 +25,7 @@ pub async fn check_user(user: &str, db: &Surreal<Db>) -> anyhow::Result<User> {
     }
 }
 
-pub async fn insert_user(user: User, db: &Surreal<Db>) -> anyhow::Result<User> {
+pub async fn insert_user(user: User, db: &Surreal<Client>) -> anyhow::Result<User> {
     let user: Option<User> = db.create(("user", user.name.clone())).content(user).await?;
     match user {
         Some(u) => Ok(u),
@@ -31,7 +33,7 @@ pub async fn insert_user(user: User, db: &Surreal<Db>) -> anyhow::Result<User> {
     }
 }
 
-pub async fn insert_post(post: UserPost, db: &Surreal<Db>) -> anyhow::Result<()> {
+pub async fn insert_post(post: UserPost, db: &Surreal<Client>) -> anyhow::Result<()> {
     let mut _res = db
         .query(format!(
             "let $post = create post set msg = '{}', user = user:{}, likes = 0, ts = time::now();
@@ -44,7 +46,7 @@ pub async fn insert_post(post: UserPost, db: &Surreal<Db>) -> anyhow::Result<()>
     Ok(())
 }
 
-pub async fn get_post(id: String, db: &Surreal<Db>) -> anyhow::Result<UserAndPost> {
+pub async fn get_post(id: String, db: &Surreal<Client>) -> anyhow::Result<UserAndPost> {
     let mut res = db
         .query(format!("select <-user.* as user, ->post.* as post from wrote where out = post:{} split post, user", id))
         .await?;
@@ -57,7 +59,7 @@ pub async fn get_post(id: String, db: &Surreal<Db>) -> anyhow::Result<UserAndPos
     }
 }
 
-pub async fn get_posts(db: &Surreal<Db>) -> anyhow::Result<Vec<UserAndPost>> {
+pub async fn get_posts(db: &Surreal<Client>) -> anyhow::Result<Vec<UserAndPost>> {
     let mut res = db
         .query("select <-user.* as user, ->post.* as post from wrote split post, user")
         .await?;
@@ -68,7 +70,7 @@ pub async fn get_posts(db: &Surreal<Db>) -> anyhow::Result<Vec<UserAndPost>> {
 
 pub async fn get_posts_from_user(
     user: String,
-    db: &Surreal<Db>,
+    db: &Surreal<Client>,
 ) -> anyhow::Result<Vec<UserAndPost>> {
     let mut res = db
         .query(format!(
@@ -83,7 +85,7 @@ pub async fn get_posts_from_user(
 
 pub async fn get_replies_to_post(
     postid: String,
-    db: &Surreal<Db>,
+    db: &Surreal<Client>,
 ) -> anyhow::Result<Vec<UserAndPost>> {
     let mut replies = db
         .query(format!(
@@ -96,7 +98,7 @@ pub async fn get_replies_to_post(
     Ok(r)
 }
 
-pub async fn insert_reply(reply: UserReply, db: &Surreal<Db>) -> anyhow::Result<()> {
+pub async fn insert_reply(reply: UserReply, db: &Surreal<Client>) -> anyhow::Result<()> {
     let mut _res = db
         .query(format!(
             "let $reply = create post set msg = '{}', user = 'user:{}', likes = 0, ts = time::now();
@@ -109,12 +111,12 @@ pub async fn insert_reply(reply: UserReply, db: &Surreal<Db>) -> anyhow::Result<
     Ok(())
 }
 
-pub async fn delete_post(post: LikePost, db: &Surreal<Db>) -> anyhow::Result<()> {
+pub async fn delete_post(post: LikePost, db: &Surreal<Client>) -> anyhow::Result<()> {
     let _post: Option<DBPost> = db.delete(("post", post.id)).await?;
     Ok(())
 }
 
-pub async fn like_post(post: LikePost, db: &Surreal<Db>) -> anyhow::Result<()> {
+pub async fn like_post(post: LikePost, db: &Surreal<Client>) -> anyhow::Result<()> {
     let mut liked_res = db
         .query(format!(
             "select count() from liked where user:{} = in and post:{} = out group all",
@@ -151,7 +153,7 @@ pub async fn like_post(post: LikePost, db: &Surreal<Db>) -> anyhow::Result<()> {
 pub async fn get_user_likes_post(
     user: String,
     postid: String,
-    db: &Surreal<Db>,
+    db: &Surreal<Client>,
 ) -> anyhow::Result<bool> {
     let mut liked_res = db
         .query(format!(
@@ -167,7 +169,7 @@ pub async fn get_user_likes_post(
     }
 }
 
-pub async fn get_likes(user: String, db: &Surreal<Db>) -> anyhow::Result<Vec<DBPost>> {
+pub async fn get_likes(user: String, db: &Surreal<Client>) -> anyhow::Result<Vec<DBPost>> {
     let mut res = db
         .query(format!("select out.* from liked where user:{} = in", user))
         .await?;
@@ -175,7 +177,7 @@ pub async fn get_likes(user: String, db: &Surreal<Db>) -> anyhow::Result<Vec<DBP
     Ok(likes)
 }
 
-pub async fn clear_db(db: &Surreal<Db>) -> anyhow::Result<()> {
+pub async fn clear_db(db: &Surreal<Client>) -> anyhow::Result<()> {
     let _posts: Vec<DBPost> = db.delete("post").await?;
     let _users: Vec<User> = db.delete("user").await?;
     Ok(())

@@ -14,14 +14,14 @@ use oauth2::{
 };
 use serde::Deserialize;
 use std::env;
-use surrealdb::{engine::local::Db, Surreal};
+use surrealdb::{engine::remote::http::Client, Surreal};
 use twit::{db::*, models::*};
 
 const URL: &'static str = "https://twit-eight.vercel.app";
 
 struct AppState {
     oauth: BasicClient,
-    db: Surreal<Db>,
+    db: Surreal<Client>,
 }
 
 #[derive(Deserialize)]
@@ -198,10 +198,7 @@ async fn auth_google(data: Data<AppState>, params: Query<AuthRequest>) -> impl R
 
             match check_user(&name, &data.db).await {
                 Ok(_) => HttpResponse::Found()
-                    .insert_header((
-                        header::LOCATION,
-                        format!("{URL}/users/{name}"),
-                    ))
+                    .insert_header((header::LOCATION, format!("{URL}/users/{name}")))
                     .finish(),
                 Err(_check_error) => {
                     let user = User {
@@ -210,10 +207,7 @@ async fn auth_google(data: Data<AppState>, params: Query<AuthRequest>) -> impl R
                     };
                     match insert_user(user, &data.db).await {
                         Ok(_) => HttpResponse::Found()
-                            .insert_header((
-                                header::LOCATION,
-                                format!("{URL}/users/{name}"),
-                            ))
+                            .insert_header((header::LOCATION, format!("{URL}/users/{name}")))
                             .finish(),
 
                         Err(insert_error) => {

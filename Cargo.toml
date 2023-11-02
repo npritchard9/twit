@@ -12,7 +12,7 @@ env_logger = "0.10.0"
 log = "0.4.19"
 ts-rs = { version = "7.0.0", features = ["chrono", "chrono-impl"] }
 serde = { version = "1.0.167", features = ["derive"] }
-surrealdb = { version = "1.0.0", features = ["kv-speedb"] }
+surrealdb = { version = "1.0.0", features = ["protocol-http"] }
 dotenvy = "0.15.7"
 oauth2 = "4.4.1"
 url = "2.4.0"
