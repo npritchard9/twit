@@ -4,7 +4,7 @@ import { User } from "../../bindings/User";
 
 export default function Users() {
 	async function fetchUsers() {
-		let users: User[] = await (await fetch("http://127.0.0.1:8080/users")).json();
+		let users: User[] = await (await fetch("http://twit.shuttleapp.rs/users")).json();
 		return users;
 	}
 	const user_query = createQuery(() => {

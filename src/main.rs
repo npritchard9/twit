@@ -244,7 +244,7 @@ async fn get_user_from_google(token: String) -> anyhow::Result<String> {
 async fn main(
     #[shuttle_secrets::Secrets] secret_store: SecretStore,
 ) -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static> {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    // env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
     // dotenv().ok();
     let google_client_id = if let Some(gci) = secret_store.get("GOOGLE_CLIENT_ID") {
@@ -275,8 +275,10 @@ async fn main(
             Some(token_url),
         )
         .set_redirect_uri(
-            RedirectUrl::new("http://localhost:8080/auth/google".to_string())
+            RedirectUrl::new("https://twit.shuttleapp.rs/auth/google".to_string())
                 .expect("Invalid redirect URL"),
+            // RedirectUrl::new("http://localhost:8080/auth/google".to_string())
+            //     .expect("Invalid redirect URL"),
         );
         let cors = Cors::permissive();
         cfg.service(
@@ -285,7 +287,7 @@ async fn main(
                     oauth: client,
                     db: db.clone(),
                 }))
-                .wrap(Logger::default())
+                // .wrap(Logger::default())
                 .wrap(cors)
                 .service(login)
                 .service(auth_google)

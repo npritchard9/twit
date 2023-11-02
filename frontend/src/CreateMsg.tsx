@@ -11,7 +11,7 @@ export default function CreateMsg(props: { user: string }) {
 		return {
 			mutationFn: async () => {
 				let json: UserPost = { user: props.user, msg: msg() };
-				await fetch("http://127.0.0.1:8080/create_msg", {
+				await fetch("http://twit.shuttleapp.rs/create_msg", {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",

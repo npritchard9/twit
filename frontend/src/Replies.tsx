@@ -15,7 +15,7 @@ export default function Replies(props: RepliesProps) {
 	const [replying, setReplying] = createSignal<UserAndPost>();
 	async function fetchReplies() {
 		let replies: UserAndPost[] = await (
-			await fetch(`http://127.0.0.1:8080/msg/${props.id}/replies`)
+			await fetch(`http://twit.shuttleapp.rs/msg/${props.id}/replies`)
 		).json();
 		console.log("REPLIES: ", replies);
 		return replies;

@@ -22,7 +22,7 @@ export default function CreateReply(props: ReplyProps) {
 					user: props.user,
 					msg: msg(),
 				};
-				await fetch("http://127.0.0.1:8080/reply_msg", {
+				await fetch("http://twit.shuttleapp.rs/reply_msg", {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
