@@ -280,7 +280,7 @@ async fn main(
             // RedirectUrl::new("http://localhost:8080/auth/google".to_string())
             //     .expect("Invalid redirect URL"),
         );
-        let cors = Cors::permissive();
+        // let cors = Cors::permissive();
         cfg.service(
             web::scope("/")
                 .app_data(Data::new(AppState {
@@ -288,7 +288,7 @@ async fn main(
                     db: db.clone(),
                 }))
                 // .wrap(Logger::default())
-                .wrap(cors)
+                // .wrap(cors)
                 .service(login)
                 .service(auth_google)
                 .service(get_msg)
