@@ -18,11 +18,11 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
 
 render(
 	() => (
-		<QueryClientProvider client={qc}>
-			<Router>
+		<Router>
+			<QueryClientProvider client={qc}>
 				<App />
-			</Router>
-		</QueryClientProvider>
+			</QueryClientProvider>
+		</Router>
 	),
 	root!
 );

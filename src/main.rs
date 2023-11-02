@@ -17,6 +17,8 @@ use std::env;
 use surrealdb::{engine::local::Db, Surreal};
 use twit::{db::*, models::*};
 
+const URL: &'static str = "https://twit-eight.vercel.app";
+
 struct AppState {
     oauth: BasicClient,
     db: Surreal<Db>,
@@ -198,7 +200,7 @@ async fn auth_google(data: Data<AppState>, params: Query<AuthRequest>) -> impl R
                 Ok(_) => HttpResponse::Found()
                     .insert_header((
                         header::LOCATION,
-                        format!("http://localhost:3000/users/{name}"),
+                        format!("{URL}/users/{name}"),
                     ))
                     .finish(),
                 Err(_check_error) => {
@@ -210,7 +212,7 @@ async fn auth_google(data: Data<AppState>, params: Query<AuthRequest>) -> impl R
                         Ok(_) => HttpResponse::Found()
                             .insert_header((
                                 header::LOCATION,
-                                format!("http://localhost:3000/users/{name}"),
+                                format!("{URL}/users/{name}"),
                             ))
                             .finish(),
 
