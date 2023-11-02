@@ -3,17 +3,20 @@ use actix_web::{
     get,
     http::header,
     middleware::Logger,
-    web::{post, resource, Data, Json, Path, Query},
+    web::{self, post, resource, Data, Json, Path, Query, ServiceConfig},
     App, HttpResponse, HttpServer, Responder,
 };
-use dotenvy::dotenv;
+use anyhow::anyhow;
+// use dotenvy::dotenv;
 use env_logger::Env;
 use oauth2::{
     basic::BasicClient, reqwest::async_http_client, AuthUrl, AuthorizationCode, ClientId,
     ClientSecret, CsrfToken, RedirectUrl, Scope, TokenResponse, TokenUrl,
 };
 use serde::Deserialize;
-use std::env;
+use shuttle_actix_web::ShuttleActixWeb;
+use shuttle_secrets::SecretStore;
+// use std::env;
 use surrealdb::{engine::remote::http::Client, Surreal};
 use twit::{db::*, models::*};
 
@@ -237,22 +240,29 @@ async fn get_user_from_google(token: String) -> anyhow::Result<String> {
     Ok(res.email.split_once("@").unwrap().0.into())
 }
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
+#[shuttle_runtime::main]
+async fn main(
+    #[shuttle_secrets::Secrets] secret_store: SecretStore,
+) -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
-    dotenv().ok();
+    // dotenv().ok();
+    let google_client_id = if let Some(gci) = secret_store.get("GOOGLE_CLIENT_ID") {
+        gci
+    } else {
+        return Err(anyhow!("Google client id not found").into());
+    };
+
+    let google_client_secret = if let Some(gcs) = secret_store.get("GOOGLE_CLIENT_SECRET") {
+        gcs
+    } else {
+        return Err(anyhow!("Google client secret not found").into());
+    };
 
     let db = get_db().await.expect("The db to exist");
-    HttpServer::new(move || {
-        let google_client_id = ClientId::new(
-            env::var("GOOGLE_CLIENT_ID")
-                .expect("Missing the GOOGLE_CLIENT_ID environment variable."),
-        );
-        let google_client_secret = ClientSecret::new(
-            env::var("GOOGLE_CLIENT_SECRET")
-                .expect("Missing the GOOGLE_CLIENT_SECRET environment variable."),
-        );
+    let config = move |cfg: &mut ServiceConfig| {
+        let google_client_id = ClientId::new(google_client_id);
+        let google_client_secret = ClientSecret::new(google_client_secret);
         let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string())
             .expect("Invalid authorization endpoint URL");
         let token_url = TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".to_string())
@@ -269,27 +279,75 @@ async fn main() -> std::io::Result<()> {
                 .expect("Invalid redirect URL"),
         );
         let cors = Cors::permissive();
-        App::new()
-            .app_data(Data::new(AppState {
-                oauth: client,
-                db: db.clone(),
-            }))
-            .wrap(Logger::default())
-            .wrap(cors)
-            .service(login)
-            .service(auth_google)
-            .service(get_msg)
-            .service(get_msgs)
-            .service(get_replies)
-            .service(get_me)
-            .service(get_users)
-            .service(get_user_likes_msg)
-            .service(resource("/create_msg").route(post().to(create_msg)))
-            .service(resource("/delete_msg").route(post().to(delete_msg)))
-            .service(resource("/like_msg").route(post().to(like_msg)))
-            .service(resource("/reply_msg").route(post().to(reply_msg)))
-    })
-    .bind(("127.0.0.1", 8080))?
-    .run()
-    .await
+        cfg.service(
+            web::scope("/")
+                .app_data(Data::new(AppState {
+                    oauth: client,
+                    db: db.clone(),
+                }))
+                .wrap(Logger::default())
+                .wrap(cors)
+                .service(login)
+                .service(auth_google)
+                .service(get_msg)
+                .service(get_msgs)
+                .service(get_replies)
+                .service(get_me)
+                .service(get_users)
+                .service(get_user_likes_msg)
+                .service(resource("/create_msg").route(post().to(create_msg)))
+                .service(resource("/delete_msg").route(post().to(delete_msg)))
+                .service(resource("/like_msg").route(post().to(like_msg)))
+                .service(resource("/reply_msg").route(post().to(reply_msg))),
+        );
+    };
+    Ok(config.into())
+    // HttpServer::new(move || {
+    //     let google_client_id = ClientId::new(
+    //         env::var("GOOGLE_CLIENT_ID")
+    //             .expect("Missing the GOOGLE_CLIENT_ID environment variable."),
+    //     );
+    //     let google_client_secret = ClientSecret::new(
+    //         env::var("GOOGLE_CLIENT_SECRET")
+    //             .expect("Missing the GOOGLE_CLIENT_SECRET environment variable."),
+    //     );
+    //     let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string())
+    //         .expect("Invalid authorization endpoint URL");
+    //     let token_url = TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".to_string())
+    //         .expect("Invalid token endpoint URL");
+    //
+    //     let client = BasicClient::new(
+    //         google_client_id,
+    //         Some(google_client_secret),
+    //         auth_url,
+    //         Some(token_url),
+    //     )
+    //     .set_redirect_uri(
+    //         RedirectUrl::new("http://localhost:8080/auth/google".to_string())
+    //             .expect("Invalid redirect URL"),
+    //     );
+    //     let cors = Cors::permissive();
+    //     App::new()
+    //         .app_data(Data::new(AppState {
+    //             oauth: client,
+    //             db: db.clone(),
+    //         }))
+    //         .wrap(Logger::default())
+    //         .wrap(cors)
+    //         .service(login)
+    //         .service(auth_google)
+    //         .service(get_msg)
+    //         .service(get_msgs)
+    //         .service(get_replies)
+    //         .service(get_me)
+    //         .service(get_users)
+    //         .service(get_user_likes_msg)
+    //         .service(resource("/create_msg").route(post().to(create_msg)))
+    //         .service(resource("/delete_msg").route(post().to(delete_msg)))
+    //         .service(resource("/like_msg").route(post().to(like_msg)))
+    //         .service(resource("/reply_msg").route(post().to(reply_msg)))
+    // })
+    // .bind(("127.0.0.1", 8080))?
+    // .run()
+    // .await
 }
