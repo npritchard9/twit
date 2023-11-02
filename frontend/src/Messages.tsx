@@ -1,5 +1,5 @@
 import { createMutation, createQuery, useQueryClient } from "@tanstack/solid-query";
-import { Switch, Match, For, createSignal, Show, createEffect } from "solid-js";
+import { Switch, Match, For, createSignal, Show } from "solid-js";
 import { type UserAndPost } from "../../bindings/UserAndPost";
 import { type LikePost } from "../../bindings/LikePost";
 import { DeleteButton, HeartButton, ReplyButton } from "./assets/svgs";
@@ -69,7 +69,7 @@ export default function Messages(props: MessagesProps) {
 							</Match>
 							<Match when={me_query.isSuccess}>
 								<For each={me_query.data}>
-									{msg => <Msg data={msg} extra={props.user} />}
+									{msg => <Msg data={msg} user={props.user} />}
 								</For>
 							</Match>
 						</Switch>
@@ -84,7 +84,7 @@ export default function Messages(props: MessagesProps) {
 						</Match>
 						<Match when={msg_query.isSuccess}>
 							<For each={msg_query.data}>
-								{msg => <Msg data={msg} extra={props.user} />}
+								{msg => <Msg data={msg} user={props.user} />}
 							</For>
 						</Match>
 					</Switch>
@@ -96,17 +96,18 @@ export default function Messages(props: MessagesProps) {
 
 type MsgProps = {
 	data: UserAndPost;
-	extra: string;
+	user: string;
 };
 
 export const Msg = (props: MsgProps) => {
+	console.log("Msg props: ", props.data.post);
 	const qc = useQueryClient();
 	const delete_msg = createMutation(() => {
 		return {
 			mutationFn: async () => {
 				let json: LikePost = {
 					id: props.data.post.id,
-					user: props.data.user.name ?? props.extra,
+					user: props.data.user.name,
 				};
 				await fetch("http://127.0.0.1:8080/delete_msg", {
 					method: "POST",
@@ -159,7 +160,7 @@ export const Msg = (props: MsgProps) => {
 			}}
 		>
 			<div class="flex gap-2 items-center">
-				<div class="font-bold">{props.data.user.name ?? props.extra}</div>
+				<div class="font-bold">{props.data.user.name}</div>
 				<div class="text-gray-600 text-sm">{utc.toLocaleString()}</div>
 			</div>
 			<div>{props.data.post.msg}</div>
@@ -175,14 +176,10 @@ export const Msg = (props: MsgProps) => {
 				>
 					<div class="flex gap-2 items-center">
 						<HeartButton />
-						{props.data.post.likes ? props.data.post.likes.toString() : 0}
+						{props.data.post.likes.toString()}
 					</div>
 				</button>
-				<Show
-					when={
-						props.data.user.name === undefined || props.data.user.name === props.extra
-					}
-				>
+				<Show when={props.data.user.name === props.user}>
 					<button
 						class="text-gray-600 hover:text-red-700"
 						onclick={() => delete_msg.mutate()}

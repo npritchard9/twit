@@ -4,16 +4,17 @@ import { useParams } from "@solidjs/router";
 import { Match, Switch, createSignal } from "solid-js";
 import Replies from "./Replies";
 import CreateReply from "./CreateReply";
-import { DBPost } from "../../bindings/DBPost";
 import { createQuery } from "@tanstack/solid-query";
+import { UserAndPost } from "../../bindings/UserAndPost";
 
 export default function PostAndReplies() {
 	const [name, _] = createSignal<string | null>(sessionStorage.getItem("user"));
 	const params = useParams<{ id: string }>();
 	const id = params.id;
 	async function fetchPost() {
-		let msgs: DBPost = await (await fetch(`http://127.0.0.1:8080/msg/${id}`)).json();
-		return msgs;
+		let msg: UserAndPost = await (await fetch(`http://127.0.0.1:8080/msg/${id}`)).json();
+		console.log("Post should be: ", msg);
+		return msg;
 	}
 
 	const post = createQuery(() => {
@@ -43,11 +44,7 @@ export default function PostAndReplies() {
 						<div class="border-b border-b-gray-600 w-full">
 							<CreateReply user={name()} msg={post.data} />
 						</div>
-						<Replies
-							user={name()}
-							data={{ post: post.data, user: { name: name(), bio: "" } }}
-							id={id}
-						/>
+						<Replies user={name()} data={post.data} id={id} />
 					</div>
 				</div>
 			</Match>

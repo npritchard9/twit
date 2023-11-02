@@ -87,23 +87,21 @@ pub async fn get_replies_to_post(
 ) -> anyhow::Result<Vec<UserAndPost>> {
     let mut replies = db
         .query(format!(
-            "select in.* as post, in.user.* as user from replied where out = {} split post, user",
+            "select in.* as post, in.user.* as user from replied where out = post:{} split post, user",
             postid
         ))
         .await?;
-    let r = replies.take(0)?;
-    println!("replies: {r:#?}");
+    let r: Vec<UserAndDBPost> = replies.take(0)?;
+    let r = r.into_iter().map(|r| UserAndPost::from(r)).collect();
     Ok(r)
 }
 
 pub async fn insert_reply(reply: UserReply, db: &Surreal<Db>) -> anyhow::Result<()> {
     let mut _res = db
         .query(format!(
-            "begin transaction;
-            let $reply = create post set msg = '{}', user = 'user:{}', likes = 0, ts = time::now();
-            relate user:{}->wrote->post:($reply.id);
-            relate ($reply.id)->replied->{};
-            commit transaction;
+            "let $reply = create post set msg = '{}', user = 'user:{}', likes = 0, ts = time::now();
+            relate user:{}->wrote->($reply.id);
+            relate ($reply.id)->replied->post:{};
             ",
             reply.msg, reply.user, reply.user, reply.postid
         ))

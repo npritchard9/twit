@@ -2,4 +2,5 @@
 import type { Post } from "./Post";
 import type { User } from "./User";
 
-export interface UserAndPost { user: User, post: Post, }
+export type UserAndPost = { user: User; post: Post };
+

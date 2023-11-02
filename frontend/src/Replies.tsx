@@ -1,18 +1,24 @@
 import { createQuery } from "@tanstack/solid-query";
-import { DBPost } from "../../bindings/DBPost";
 import { For, Match, Show, Switch, createSignal } from "solid-js";
 import { Msg } from "./Messages";
 import CreateReply from "./CreateReply";
 import { UserAndPost } from "../../bindings/UserAndPost";
 
-export default function Replies(props: { user: string; data: UserAndPost; id: string }) {
-	const [replying, setReplying] = createSignal<DBPost>();
+type RepliesProps = {
+	user: string;
+	data: UserAndPost;
+	id: string;
+};
+
+export default function Replies(props: RepliesProps) {
+	console.log("Replies props: ", props.data);
+	const [replying, setReplying] = createSignal<UserAndPost>();
 	async function fetchReplies() {
-		let msgs: UserAndPost[] = await (
+		let replies: UserAndPost[] = await (
 			await fetch(`http://127.0.0.1:8080/msg/${props.id}/replies`)
 		).json();
-		console.log("REPLIES: ", msgs);
-		return msgs;
+		console.log("REPLIES: ", replies);
+		return replies;
 	}
 
 	const replies = createQuery(() => {
@@ -34,11 +40,9 @@ export default function Replies(props: { user: string; data: UserAndPost; id: st
 					</Match>
 					<Match when={replies.isSuccess}>
 						<div class="p-2 border-b border-b-gray-600">
-							<Msg data={props.data} extra={props.user} />
+							<Msg data={props.data} user={props.user} />
 						</div>
-						<For each={replies.data}>
-							{msg => <Msg data={msg} extra={props.user} />}
-						</For>
+						<For each={replies.data}>{msg => <Msg data={msg} user={props.user} />}</For>
 						<Show when={replying()}>
 							<div class="z-10">
 								<CreateReply user={props.user} msg={replying()} />

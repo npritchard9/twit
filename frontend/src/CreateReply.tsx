@@ -2,13 +2,13 @@ import { Match, Switch, createSignal } from "solid-js";
 import { SendButton } from "./assets/svgs";
 import { createMutation, useQueryClient } from "@tanstack/solid-query";
 import { type UserReply } from "../../bindings/UserReply";
-import { type DBPost } from "../../bindings/DBPost";
+import { UserAndPost } from "../../bindings/UserAndPost";
 
 const [msg, setMsg] = createSignal("");
 
 type ReplyProps = {
 	user: string;
-	msg: DBPost;
+	msg: UserAndPost;
 };
 
 export default function CreateReply(props: ReplyProps) {
@@ -18,7 +18,7 @@ export default function CreateReply(props: ReplyProps) {
 		return {
 			mutationFn: async () => {
 				let json: UserReply = {
-					postid: props.msg.id,
+					postid: props.msg.post.id,
 					user: props.user,
 					msg: msg(),
 				};
@@ -34,6 +34,7 @@ export default function CreateReply(props: ReplyProps) {
 				setMsg("");
 				qc.invalidateQueries({ queryKey: ["msgs"] });
 				qc.invalidateQueries({ queryKey: ["me"] });
+				qc.invalidateQueries({ queryKey: ["replies"] });
 			},
 		};
 	});
