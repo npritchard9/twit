@@ -12,7 +12,7 @@ export default function PostAndReplies() {
 	const params = useParams<{ id: string }>();
 	const id = params.id;
 	async function fetchPost() {
-		let msg: UserAndPost = await (await fetch(`http://npshuttletest.shuttleapp.rs/msg/${id}`)).json();
+		let msg: UserAndPost = await (await fetch(`https://axumtwit.shuttleapp.rs/msg/${id}`)).json();
 		console.log("Post should be: ", msg);
 		return msg;
 	}

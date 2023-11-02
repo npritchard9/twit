@@ -4,7 +4,7 @@ import { User } from "../../bindings/User";
 
 export default function Users() {
 	async function fetchUsers() {
-		let users: User[] = await (await fetch("http://npshuttletest.shuttleapp.rs/users")).json();
+		let users: User[] = await (await fetch("https://axumtwit.shuttleapp.rs/users")).json();
 		return users;
 	}
 	const user_query = createQuery(() => {
