@@ -16,13 +16,13 @@ export default function Messages(props: MessagesProps) {
 
 	async function fetchMe() {
 		let msgs: UserAndPost[] = await (
-			await fetch(`https://twit.shuttleapp.rs/user/${encodeURI(props.user)}`)
+			await fetch(`https://npshuttletest.shuttleapp.rs/user/${encodeURI(props.user)}`)
 		).json();
 		return msgs;
 	}
 
 	async function fetchMsgs() {
-		let msgs: UserAndPost[] = await (await fetch("https://twit.shuttleapp.rs/msgs")).json();
+		let msgs: UserAndPost[] = await (await fetch("https://npshuttletest.shuttleapp.rs/msgs")).json();
 		return msgs;
 	}
 	const msg_query = createQuery(() => {
@@ -109,7 +109,7 @@ export const Msg = (props: MsgProps) => {
 					id: props.data.post.id,
 					user: props.data.user.name,
 				};
-				await fetch("http://twit.shuttleapp.rs/delete_msg", {
+				await fetch("http://npshuttletest.shuttleapp.rs/delete_msg", {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
@@ -128,7 +128,7 @@ export const Msg = (props: MsgProps) => {
 		return {
 			mutationFn: async () => {
 				let json: LikePost = { id: props.data.post.id, user: props.data.user.name };
-				await fetch("http://twit.shuttleapp.rs/like_msg", {
+				await fetch("http://npshuttletest.shuttleapp.rs/like_msg", {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
